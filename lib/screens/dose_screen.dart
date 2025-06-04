@@ -38,20 +38,25 @@ class _DoseScreenState extends ConsumerState<DoseScreen> {
       onTap: _dismissKeyboard,
       child: Scaffold(
         appBar: AppBar(title: Text('Doses for ${widget.medication.name}')),
-        body: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: DoseForm(
+        body: SingleChildScrollView(
+          child: Column(
+            children: [
+              DoseForm(
                 medication: widget.medication,
                 onEditDose: _editDose,
                 onClearForm: _clearForm,
                 onDismissKeyboard: _dismissKeyboard,
               ),
-            ),
-            Expanded(
-              child: dosesAsync.when(
-                data: (doses) => ListView.builder(
+              const Divider(height: 1),
+              dosesAsync.when(
+                data: (doses) => doses.isEmpty
+                    ? const Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Text('No doses scheduled'),
+                )
+                    : ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
                   itemCount: doses.length,
                   itemBuilder: (context, index) {
                     final dose = doses[index];
@@ -92,8 +97,8 @@ class _DoseScreenState extends ConsumerState<DoseScreen> {
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (e, _) => Center(child: Text('Error: $e')),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

@@ -238,133 +238,138 @@ class _DoseFormState extends ConsumerState<DoseForm> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          _summary,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.primary,
-          ),
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              _summary,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  TextFormField(
+                    controller: _amountController,
+                    decoration: const InputDecoration(
+                      labelText: 'Amount',
+                      helperText: "Enter the dose amount",
+                    ),
+                    keyboardType: TextInputType.number,
+                    validator: (value) {
+                      if (value!.isEmpty) return 'Amount is required';
+                      if (double.tryParse(value) == null) return 'Enter a valid number';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    value: _unitController.text.isEmpty ? null : _unitController.text,
+                    decoration: const InputDecoration(
+                      labelText: 'Unit',
+                      helperText: 'Select the dose unit (mg, mcg, IU)',
+                    ),
+                    items: Units.doseUnits.map((unit) => DropdownMenuItem(value: unit, child: Text(unit))).toList(),
+                    onChanged: (value) => setState(() => _unitController.text = value ?? ''),
+                    validator: (value) => value == null ? 'Unit is required' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _weightController,
+                    decoration: const InputDecoration(
+                      labelText: 'Weight (kg)',
+                      helperText: 'Enter weight for dose calculation (optional)',
+                    ),
+                    keyboardType: TextInputType.number,
+                    validator: (value) {
+                      if (value!.isNotEmpty && double.tryParse(value) == null) return 'Enter a valid number';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _dosePerKgController,
+                    decoration: const InputDecoration(
+                      labelText: 'Dose per kg',
+                      helperText: 'Enter dose per kg for calculation (optional)',
+                    ),
+                    keyboardType: TextInputType.number,
+                    validator: (value) {
+                      if (value!.isNotEmpty && double.tryParse(value) == null) return 'Enter a valid number';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _timeController,
+                    decoration: const InputDecoration(
+                      labelText: 'Time (e.g., 08:00)',
+                      helperText: 'Select the dose administration time',
+                    ),
+                    keyboardType: TextInputType.datetime,
+                    readOnly: true,
+                    onTap: () async {
+                      final time = await showTimePicker(
+                        context: context,
+                        initialTime: TimeOfDay.now(),
+                      );
+                      if (time != null) {
+                        final formattedTime = '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+                        _timeController.text = formattedTime;
+                        _updateSummary();
+                      }
+                    },
+                    validator: (value) => value!.isEmpty ? 'Time is required' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  InputDecorator(
+                    decoration: const InputDecoration(
+                      labelText: 'Days',
+                      helperText: 'Select days for the dose schedule',
+                    ),
+                    child: Wrap(
+                      spacing: 8,
+                      children: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) {
+                        return ChoiceChip(
+                          label: Text(day),
+                          selected: _selectedDays.contains(day),
+                          onSelected: (selected) {
+                            setState(() {
+                              if (selected) {
+                                _selectedDays.add(day);
+                              } else {
+                                _selectedDays.remove(day);
+                              }
+                              _updateSummary();
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _calculateDose,
+                    child: const Text('Calculate Dose'),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _scheduleDose,
+                    child: Text(_selectedDose == null ? 'Schedule Dose' : 'Update Dose'),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 24),
-        Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              TextFormField(
-                controller: _amountController,
-                decoration: const InputDecoration(
-                  labelText: 'Amount',
-                  helperText: "Enter the dose amount",
-                ),
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value!.isEmpty) return 'Amount is required';
-                  if (double.tryParse(value) == null) return 'Enter a valid number';
-                  return null;
-                },
-              ),
-              const SizedBox(height: 24),
-              DropdownButtonFormField<String>(
-                value: _unitController.text.isEmpty ? null : _unitController.text,
-                decoration: const InputDecoration(
-                  labelText: 'Unit',
-                  helperText: 'Select the dose unit (mg, mcg, IU)',
-                ),
-                items: Units.doseUnits.map((unit) => DropdownMenuItem(value: unit, child: Text(unit))).toList(),
-                onChanged: (value) => setState(() => _unitController.text = value ?? ''),
-                validator: (value) => value == null ? 'Unit is required' : null,
-              ),
-              const SizedBox(height: 24),
-              TextFormField(
-                controller: _weightController,
-                decoration: const InputDecoration(
-                  labelText: 'Weight (kg)',
-                  helperText: 'Enter weight for dose calculation (optional)',
-                ),
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value!.isNotEmpty && double.tryParse(value) == null) return 'Enter a valid number';
-                  return null;
-                },
-              ),
-              const SizedBox(height: 24),
-              TextFormField(
-                controller: _dosePerKgController,
-                decoration: const InputDecoration(
-                  labelText: 'Dose per kg',
-                  helperText: 'Enter dose per kg for calculation (optional)',
-                ),
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value!.isNotEmpty && double.tryParse(value) == null) return 'Enter a valid number';
-                  return null;
-                },
-              ),
-              const SizedBox(height: 24),
-              TextFormField(
-                controller: _timeController,
-                decoration: const InputDecoration(
-                  labelText: 'Time (e.g., 08:00)',
-                  helperText: 'Select the dose administration time',
-                ),
-                keyboardType: TextInputType.datetime,
-                readOnly: true,
-                onTap: () async {
-                  final time = await showTimePicker(
-                    context: context,
-                    initialTime: TimeOfDay.now(),
-                  );
-                  if (time != null) {
-                    final formattedTime = '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
-                    _timeController.text = formattedTime;
-                    _updateSummary();
-                  }
-                },
-                validator: (value) => value!.isEmpty ? 'Time is required' : null,
-              ),
-              const SizedBox(height: 24),
-              InputDecorator(
-                decoration: const InputDecoration(
-                  labelText: 'Days',
-                  helperText: 'Select days for the dose schedule',
-                ),
-                child: Wrap(
-                  spacing: 8,
-                  children: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) {
-                    return ChoiceChip(
-                      label: Text(day),
-                      selected: _selectedDays.contains(day),
-                      onSelected: (selected) {
-                        setState(() {
-                          if (selected) {
-                            _selectedDays.add(day);
-                          } else {
-                            _selectedDays.remove(day);
-                          }
-                          _updateSummary();
-                        });
-                      },
-                    );
-                  }).toList(),
-                ),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _calculateDose,
-                child: const Text('Calculate Dose'),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _scheduleDose,
-                child: Text(_selectedDose == null ? 'Schedule Dose' : 'Update Dose'),
-              ),
-            ],
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
