@@ -1,0 +1,67 @@
+// lib/screens/history_screen.dart
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../data/database.dart';
+import '../services/drift_service.dart';
+
+class HistoryScreen extends ConsumerWidget {
+  const HistoryScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final dosesAsync = ref.watch(allDosesProvider);
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Dose History')),
+      body: dosesAsync.when(
+        data: (doses) => doses.isEmpty
+            ? const Center(child: Text('No dose history'))
+            : ListView.builder(
+          itemCount: doses.length,
+          itemBuilder: (context, index) {
+            final dose = doses[index];
+            return FutureBuilder<List<Schedule>>(
+              future: ref.read(driftServiceProvider).getSchedules(dose.id),
+              builder: (context, scheduleSnapshot) {
+                final schedules = scheduleSnapshot.data ?? [];
+                final scheduleText = schedules.isEmpty
+                    ? 'No schedules'
+                    : schedules.map((s) => '${s.time} (${s.days.join(', ')})').join('; ');
+                return FutureBuilder<List<Medication>>(
+                  future: ref.read(driftServiceProvider).getMedications(),
+                  builder: (context, medSnapshot) {
+                    final medication = medSnapshot.data?.firstWhere(
+                          (m) => m.id == dose.medicationId,
+                      orElse: () => Medication(
+                        id: dose.medicationId,
+                        name: 'Unknown',
+                        concentration: 0,
+                        concentrationUnit: '',
+                        stockQuantity: 0,
+                        form: '',
+                      ),
+                    );
+                    return ListTile(
+                      title: Text(
+                          '${dose.amount} ${dose.unit} (${medication?.name ?? 'Unknown'})',
+                          style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                      subtitle: Text(
+                        'Medication ID: ${dose.medicationId}\nWeight: ${dose.weight != 0.0 ? dose.weight : "N/A"} kg\nSchedules: $scheduleText',
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      visualDensity: VisualDensity.compact,
+                    );
+                  },
+                );
+              },
+            );
+          },
+        ),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(child: Text('Error: $e')),
+      ),
+    );
+  }
+}
