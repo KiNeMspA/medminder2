@@ -1,4 +1,5 @@
 // lib/screens/medication_info_screen.dart
+import 'package:drift/drift.dart' as drift; // Add this import
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -236,8 +237,8 @@ class MedicationInfoScreen extends ConsumerWidget {
                                               icon: const Icon(Icons.check_circle, color: Colors.green),
                                               onPressed: () {
                                                 final history = DoseHistoryCompanion(
-                                                  doseId: Value(dose.id),
-                                                  takenAt: Value(DateTime.now()),
+                                                  doseId: drift.Value(dose.id), // Use drift.Value
+                                                  takenAt: drift.Value(DateTime.now()),
                                                 );
                                                 ref.read(driftServiceProvider).addDoseHistory(history).then((_) {
                                                   if (dose.unit == 'Tablet') {
