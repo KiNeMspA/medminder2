@@ -87,3 +87,33 @@ The `medication_matrix.dart` file is the cornerstone of MedMinder2’s functiona
     - Verify with:
       ```powershell
       adb devices
+
+
+# MedMinder
+
+MedMinder is a Flutter-based mobile application designed to help users manage their medications, track doses, and schedule reminders. It provides a clean, intuitive interface for adding medications, setting dose amounts, and creating schedules with notifications.
+
+## Features
+
+- **Medication Management**: Add, edit, and delete medications with details like name, concentration, quantity, and type (Tablet or Injection).
+- **Dose Tracking**: Create and manage doses for each medication, with support for tablet counts or concentration-based inputs.
+- **Scheduling**: Set daily or weekly schedules for doses with customizable days and times, integrated with local notifications.
+- **History View**: View a history of all doses across medications.
+- **Notifications**: Schedule reminders for doses using Flutter Local Notifications, with support for exact alarms.
+- **Database**: Uses Drift for local SQLite storage, with options to export the database to the Download folder.
+- **Responsive UI**: Polished Material Design with gradient headers, full-width cards, and dialog-based inputs for text fields.
+
+## Getting Started
+
+### Prerequisites
+
+- Flutter SDK: Follow the [Flutter installation guide](https://flutter.dev/docs/get-started/install).
+- Dart SDK: Included with Flutter.
+- Android Studio or VS Code for development.
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/your-repo/medminder.git
+   cd medminder

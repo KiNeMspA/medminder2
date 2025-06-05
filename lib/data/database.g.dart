@@ -481,6 +481,15 @@ class $DosesTable extends Doses with TableInfo<$DosesTable, Dose> {
     requiredDuringInsert: false,
     defaultValue: const Constant(0.0),
   );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -488,6 +497,7 @@ class $DosesTable extends Doses with TableInfo<$DosesTable, Dose> {
     amount,
     unit,
     weight,
+    name,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -537,6 +547,12 @@ class $DosesTable extends Doses with TableInfo<$DosesTable, Dose> {
         weight.isAcceptableOrUnknown(data['weight']!, _weightMeta),
       );
     }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    }
     return context;
   }
 
@@ -566,6 +582,10 @@ class $DosesTable extends Doses with TableInfo<$DosesTable, Dose> {
         DriftSqlType.double,
         data['${effectivePrefix}weight'],
       )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      ),
     );
   }
 
@@ -581,12 +601,14 @@ class Dose extends DataClass implements Insertable<Dose> {
   final double amount;
   final String unit;
   final double weight;
+  final String? name;
   const Dose({
     required this.id,
     required this.medicationId,
     required this.amount,
     required this.unit,
     required this.weight,
+    this.name,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -596,6 +618,9 @@ class Dose extends DataClass implements Insertable<Dose> {
     map['amount'] = Variable<double>(amount);
     map['unit'] = Variable<String>(unit);
     map['weight'] = Variable<double>(weight);
+    if (!nullToAbsent || name != null) {
+      map['name'] = Variable<String>(name);
+    }
     return map;
   }
 
@@ -606,6 +631,7 @@ class Dose extends DataClass implements Insertable<Dose> {
       amount: Value(amount),
       unit: Value(unit),
       weight: Value(weight),
+      name: name == null && nullToAbsent ? const Value.absent() : Value(name),
     );
   }
 
@@ -620,6 +646,7 @@ class Dose extends DataClass implements Insertable<Dose> {
       amount: serializer.fromJson<double>(json['amount']),
       unit: serializer.fromJson<String>(json['unit']),
       weight: serializer.fromJson<double>(json['weight']),
+      name: serializer.fromJson<String?>(json['name']),
     );
   }
   @override
@@ -631,6 +658,7 @@ class Dose extends DataClass implements Insertable<Dose> {
       'amount': serializer.toJson<double>(amount),
       'unit': serializer.toJson<String>(unit),
       'weight': serializer.toJson<double>(weight),
+      'name': serializer.toJson<String?>(name),
     };
   }
 
@@ -640,12 +668,14 @@ class Dose extends DataClass implements Insertable<Dose> {
     double? amount,
     String? unit,
     double? weight,
+    Value<String?> name = const Value.absent(),
   }) => Dose(
     id: id ?? this.id,
     medicationId: medicationId ?? this.medicationId,
     amount: amount ?? this.amount,
     unit: unit ?? this.unit,
     weight: weight ?? this.weight,
+    name: name.present ? name.value : this.name,
   );
   Dose copyWithCompanion(DosesCompanion data) {
     return Dose(
@@ -656,6 +686,7 @@ class Dose extends DataClass implements Insertable<Dose> {
       amount: data.amount.present ? data.amount.value : this.amount,
       unit: data.unit.present ? data.unit.value : this.unit,
       weight: data.weight.present ? data.weight.value : this.weight,
+      name: data.name.present ? data.name.value : this.name,
     );
   }
 
@@ -666,13 +697,14 @@ class Dose extends DataClass implements Insertable<Dose> {
           ..write('medicationId: $medicationId, ')
           ..write('amount: $amount, ')
           ..write('unit: $unit, ')
-          ..write('weight: $weight')
+          ..write('weight: $weight, ')
+          ..write('name: $name')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, medicationId, amount, unit, weight);
+  int get hashCode => Object.hash(id, medicationId, amount, unit, weight, name);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -681,7 +713,8 @@ class Dose extends DataClass implements Insertable<Dose> {
           other.medicationId == this.medicationId &&
           other.amount == this.amount &&
           other.unit == this.unit &&
-          other.weight == this.weight);
+          other.weight == this.weight &&
+          other.name == this.name);
 }
 
 class DosesCompanion extends UpdateCompanion<Dose> {
@@ -690,12 +723,14 @@ class DosesCompanion extends UpdateCompanion<Dose> {
   final Value<double> amount;
   final Value<String> unit;
   final Value<double> weight;
+  final Value<String?> name;
   const DosesCompanion({
     this.id = const Value.absent(),
     this.medicationId = const Value.absent(),
     this.amount = const Value.absent(),
     this.unit = const Value.absent(),
     this.weight = const Value.absent(),
+    this.name = const Value.absent(),
   });
   DosesCompanion.insert({
     this.id = const Value.absent(),
@@ -703,6 +738,7 @@ class DosesCompanion extends UpdateCompanion<Dose> {
     required double amount,
     required String unit,
     this.weight = const Value.absent(),
+    this.name = const Value.absent(),
   }) : medicationId = Value(medicationId),
        amount = Value(amount),
        unit = Value(unit);
@@ -712,6 +748,7 @@ class DosesCompanion extends UpdateCompanion<Dose> {
     Expression<double>? amount,
     Expression<String>? unit,
     Expression<double>? weight,
+    Expression<String>? name,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -719,6 +756,7 @@ class DosesCompanion extends UpdateCompanion<Dose> {
       if (amount != null) 'amount': amount,
       if (unit != null) 'unit': unit,
       if (weight != null) 'weight': weight,
+      if (name != null) 'name': name,
     });
   }
 
@@ -728,6 +766,7 @@ class DosesCompanion extends UpdateCompanion<Dose> {
     Value<double>? amount,
     Value<String>? unit,
     Value<double>? weight,
+    Value<String?>? name,
   }) {
     return DosesCompanion(
       id: id ?? this.id,
@@ -735,6 +774,7 @@ class DosesCompanion extends UpdateCompanion<Dose> {
       amount: amount ?? this.amount,
       unit: unit ?? this.unit,
       weight: weight ?? this.weight,
+      name: name ?? this.name,
     );
   }
 
@@ -756,6 +796,9 @@ class DosesCompanion extends UpdateCompanion<Dose> {
     if (weight.present) {
       map['weight'] = Variable<double>(weight.value);
     }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
     return map;
   }
 
@@ -766,7 +809,8 @@ class DosesCompanion extends UpdateCompanion<Dose> {
           ..write('medicationId: $medicationId, ')
           ..write('amount: $amount, ')
           ..write('unit: $unit, ')
-          ..write('weight: $weight')
+          ..write('weight: $weight, ')
+          ..write('name: $name')
           ..write(')'))
         .toString();
   }
@@ -1461,6 +1505,7 @@ typedef $$DosesTableCreateCompanionBuilder =
       required double amount,
       required String unit,
       Value<double> weight,
+      Value<String?> name,
     });
 typedef $$DosesTableUpdateCompanionBuilder =
     DosesCompanion Function({
@@ -1469,6 +1514,7 @@ typedef $$DosesTableUpdateCompanionBuilder =
       Value<double> amount,
       Value<String> unit,
       Value<double> weight,
+      Value<String?> name,
     });
 
 final class $$DosesTableReferences
@@ -1538,6 +1584,11 @@ class $$DosesTableFilterComposer extends Composer<_$AppDatabase, $DosesTable> {
 
   ColumnFilters<double> get weight => $composableBuilder(
     column: $table.weight,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1619,6 +1670,11 @@ class $$DosesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$MedicationsTableOrderingComposer get medicationId {
     final $$MedicationsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -1663,6 +1719,9 @@ class $$DosesTableAnnotationComposer
 
   GeneratedColumn<double> get weight =>
       $composableBuilder(column: $table.weight, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
 
   $$MedicationsTableAnnotationComposer get medicationId {
     final $$MedicationsTableAnnotationComposer composer = $composerBuilder(
@@ -1746,12 +1805,14 @@ class $$DosesTableTableManager
                 Value<double> amount = const Value.absent(),
                 Value<String> unit = const Value.absent(),
                 Value<double> weight = const Value.absent(),
+                Value<String?> name = const Value.absent(),
               }) => DosesCompanion(
                 id: id,
                 medicationId: medicationId,
                 amount: amount,
                 unit: unit,
                 weight: weight,
+                name: name,
               ),
           createCompanionCallback:
               ({
@@ -1760,12 +1821,14 @@ class $$DosesTableTableManager
                 required double amount,
                 required String unit,
                 Value<double> weight = const Value.absent(),
+                Value<String?> name = const Value.absent(),
               }) => DosesCompanion.insert(
                 id: id,
                 medicationId: medicationId,
                 amount: amount,
                 unit: unit,
                 weight: weight,
+                name: name,
               ),
           withReferenceMapper: (p0) => p0
               .map(

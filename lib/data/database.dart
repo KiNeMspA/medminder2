@@ -17,7 +17,7 @@ class StringListConverter extends TypeConverter<List<String>, String> {
 
 class Medications extends Table {
   IntColumn get id => integer().autoIncrement()();
-  TextColumn get name => text()();
+  TextColumn get name => text().unique()();
   RealColumn get concentration => real()();
   TextColumn get concentrationUnit => text()();
   RealColumn get stockQuantity => real()();
@@ -30,6 +30,7 @@ class Doses extends Table {
   RealColumn get amount => real()();
   TextColumn get unit => text()();
   RealColumn get weight => real().withDefault(const Constant(0.0))();
+  TextColumn get name => text().nullable()();
 }
 
 class Schedules extends Table {
@@ -47,7 +48,22 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 3;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onUpgrade: (Migrator m, int from, int to) async {
+      _logger.info('Upgrading database from schema version $from to $to');
+      if (from == 1) {
+        await m.addColumn(doses, doses.name);
+        _logger.info('Added name column to Doses table');
+      }
+      if (from <= 2) {
+        await m.createIndex(Index('medications', 'UNIQUE(name)'));
+        _logger.info('Added unique constraint to Medications name');
+      }
+    },
+  );
 
   Future<void> addMedication(MedicationsCompanion med) async {
     _logger.info('Adding medication: $med');

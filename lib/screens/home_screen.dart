@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dose_screen.dart';
 import 'history_screen.dart';
+import 'medication_info_screen.dart';
 import 'medication_screen.dart';
 import '../services/drift_service.dart';
 import '../widgets/medication_card.dart';
@@ -18,6 +19,20 @@ class HomeScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('MedMinder'),
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Theme.of(context).colorScheme.primary,
+                Theme.of(context).colorScheme.primary.withOpacity(0.8),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+        foregroundColor: Colors.white,
+        elevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.history),
@@ -50,7 +65,7 @@ class HomeScreen extends ConsumerWidget {
               medication: med,
               onTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => MedicationScreen(medication: med)),
+                MaterialPageRoute(builder: (_) => MedicationInfoScreen(medication: med)),
               ),
               onDoseTap: () => Navigator.push(
                 context,
