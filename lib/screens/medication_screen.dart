@@ -115,7 +115,7 @@ class _MedicationScreenState extends ConsumerState<MedicationScreen> {
       keyboardType: keyboardType,
       validator: (value) => value!.isEmpty
           ? '$label is required'
-          : keyboardType == TextInputType.number && double.tryParse(value) == null
+          : keyboardType == TextInputType.numberWithOptions(decimal: true) && double.tryParse(value) == null
           ? 'Enter a valid number'
           : null,
     );
@@ -325,13 +325,13 @@ class _MedicationScreenState extends ConsumerState<MedicationScreen> {
                         initialValue: _concentrationController.text,
                         label: 'Concentration',
                         helperText: 'Enter the active compound amount (e.g., 100)',
-                        keyboardType: TextInputType.number,
+                        keyboardType: TextInputType.numberWithOptions(decimal: true),
                         validator: (value) => value!.isEmpty
                             ? 'Concentration is required'
                             : double.tryParse(value) == null
                             ? 'Enter a valid number'
                             : null,
-                        dropdownItems: MedicationMatrix.getConcentrationUnits(_selectedType!).toSet().toList(),
+                        dropdownItems: MedicationMatrix.getConcentrationUnits(_selectedType ?? MedicationType.tablet).toSet().toList(),
                         dropdownValue: _unitController.text.isNotEmpty ? _unitController.text : null,
                         onDropdownChanged: (value) {
                           if (value != null) {
@@ -366,7 +366,7 @@ class _MedicationScreenState extends ConsumerState<MedicationScreen> {
                         label: 'Quantity',
                         controller: _quantityController,
                         helperText: 'Enter the number of tablets in stock',
-                        keyboardType: TextInputType.number,
+                        keyboardType: TextInputType.numberWithOptions(decimal: true),
                       ),
                     ),
                   ),
