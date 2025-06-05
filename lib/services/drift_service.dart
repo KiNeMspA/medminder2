@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/database.dart';
 import 'package:logging/logging.dart';
 
-
 final driftServiceProvider = Provider<DriftService>((ref) => DriftService.instance);
 final medicationsProvider = FutureProvider<List<Medication>>((ref) async {
   return ref.watch(driftServiceProvider).getMedications();
@@ -29,6 +28,11 @@ class DriftService {
   Future<void> addMedication(MedicationsCompanion med) async {
     _logger.info('Adding medication: $med');
     await _db.addMedication(med);
+  }
+
+  Future<void> updateMedicationStock(int id, double newQuantity) async {
+    _logger.info('Updating medication stock: id=$id, newQuantity=$newQuantity');
+    await _db.updateMedicationStock(id, newQuantity);
   }
 
   Future<List<Medication>> getMedications() => _db.getMedications();
@@ -71,6 +75,11 @@ class DriftService {
   Future<void> deleteSchedule(int id) async {
     _logger.info('Deleting schedule: id=$id');
     await _db.deleteSchedule(id);
+  }
+
+  Future<void> addDoseHistory(DoseHistoryCompanion history) async {
+    _logger.info('Adding dose history: $history');
+    await _db.addDoseHistory(history);
   }
 
   Future<void> copyDatabaseToPublicDirectory() async {

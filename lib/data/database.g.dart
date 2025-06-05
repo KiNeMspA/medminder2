@@ -30,6 +30,7 @@ class $MedicationsTable extends Medications
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
   );
   static const VerificationMeta _concentrationMeta = const VerificationMeta(
     'concentration',
@@ -1162,12 +1163,265 @@ class SchedulesCompanion extends UpdateCompanion<Schedule> {
   }
 }
 
+class $DoseHistoryTable extends DoseHistory
+    with TableInfo<$DoseHistoryTable, DoseHistoryData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DoseHistoryTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _doseIdMeta = const VerificationMeta('doseId');
+  @override
+  late final GeneratedColumn<int> doseId = GeneratedColumn<int>(
+    'dose_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES doses (id)',
+    ),
+  );
+  static const VerificationMeta _takenAtMeta = const VerificationMeta(
+    'takenAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> takenAt = GeneratedColumn<DateTime>(
+    'taken_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, doseId, takenAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'dose_history';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<DoseHistoryData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('dose_id')) {
+      context.handle(
+        _doseIdMeta,
+        doseId.isAcceptableOrUnknown(data['dose_id']!, _doseIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_doseIdMeta);
+    }
+    if (data.containsKey('taken_at')) {
+      context.handle(
+        _takenAtMeta,
+        takenAt.isAcceptableOrUnknown(data['taken_at']!, _takenAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_takenAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  DoseHistoryData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DoseHistoryData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      doseId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}dose_id'],
+      )!,
+      takenAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}taken_at'],
+      )!,
+    );
+  }
+
+  @override
+  $DoseHistoryTable createAlias(String alias) {
+    return $DoseHistoryTable(attachedDatabase, alias);
+  }
+}
+
+class DoseHistoryData extends DataClass implements Insertable<DoseHistoryData> {
+  final int id;
+  final int doseId;
+  final DateTime takenAt;
+  const DoseHistoryData({
+    required this.id,
+    required this.doseId,
+    required this.takenAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['dose_id'] = Variable<int>(doseId);
+    map['taken_at'] = Variable<DateTime>(takenAt);
+    return map;
+  }
+
+  DoseHistoryCompanion toCompanion(bool nullToAbsent) {
+    return DoseHistoryCompanion(
+      id: Value(id),
+      doseId: Value(doseId),
+      takenAt: Value(takenAt),
+    );
+  }
+
+  factory DoseHistoryData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DoseHistoryData(
+      id: serializer.fromJson<int>(json['id']),
+      doseId: serializer.fromJson<int>(json['doseId']),
+      takenAt: serializer.fromJson<DateTime>(json['takenAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'doseId': serializer.toJson<int>(doseId),
+      'takenAt': serializer.toJson<DateTime>(takenAt),
+    };
+  }
+
+  DoseHistoryData copyWith({int? id, int? doseId, DateTime? takenAt}) =>
+      DoseHistoryData(
+        id: id ?? this.id,
+        doseId: doseId ?? this.doseId,
+        takenAt: takenAt ?? this.takenAt,
+      );
+  DoseHistoryData copyWithCompanion(DoseHistoryCompanion data) {
+    return DoseHistoryData(
+      id: data.id.present ? data.id.value : this.id,
+      doseId: data.doseId.present ? data.doseId.value : this.doseId,
+      takenAt: data.takenAt.present ? data.takenAt.value : this.takenAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DoseHistoryData(')
+          ..write('id: $id, ')
+          ..write('doseId: $doseId, ')
+          ..write('takenAt: $takenAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, doseId, takenAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DoseHistoryData &&
+          other.id == this.id &&
+          other.doseId == this.doseId &&
+          other.takenAt == this.takenAt);
+}
+
+class DoseHistoryCompanion extends UpdateCompanion<DoseHistoryData> {
+  final Value<int> id;
+  final Value<int> doseId;
+  final Value<DateTime> takenAt;
+  const DoseHistoryCompanion({
+    this.id = const Value.absent(),
+    this.doseId = const Value.absent(),
+    this.takenAt = const Value.absent(),
+  });
+  DoseHistoryCompanion.insert({
+    this.id = const Value.absent(),
+    required int doseId,
+    required DateTime takenAt,
+  }) : doseId = Value(doseId),
+       takenAt = Value(takenAt);
+  static Insertable<DoseHistoryData> custom({
+    Expression<int>? id,
+    Expression<int>? doseId,
+    Expression<DateTime>? takenAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (doseId != null) 'dose_id': doseId,
+      if (takenAt != null) 'taken_at': takenAt,
+    });
+  }
+
+  DoseHistoryCompanion copyWith({
+    Value<int>? id,
+    Value<int>? doseId,
+    Value<DateTime>? takenAt,
+  }) {
+    return DoseHistoryCompanion(
+      id: id ?? this.id,
+      doseId: doseId ?? this.doseId,
+      takenAt: takenAt ?? this.takenAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (doseId.present) {
+      map['dose_id'] = Variable<int>(doseId.value);
+    }
+    if (takenAt.present) {
+      map['taken_at'] = Variable<DateTime>(takenAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DoseHistoryCompanion(')
+          ..write('id: $id, ')
+          ..write('doseId: $doseId, ')
+          ..write('takenAt: $takenAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $MedicationsTable medications = $MedicationsTable(this);
   late final $DosesTable doses = $DosesTable(this);
   late final $SchedulesTable schedules = $SchedulesTable(this);
+  late final $DoseHistoryTable doseHistory = $DoseHistoryTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -1176,6 +1430,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     medications,
     doses,
     schedules,
+    doseHistory,
   ];
 }
 
@@ -1557,6 +1812,24 @@ final class $$DosesTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$DoseHistoryTable, List<DoseHistoryData>>
+  _doseHistoryRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.doseHistory,
+    aliasName: $_aliasNameGenerator(db.doses.id, db.doseHistory.doseId),
+  );
+
+  $$DoseHistoryTableProcessedTableManager get doseHistoryRefs {
+    final manager = $$DoseHistoryTableTableManager(
+      $_db,
+      $_db.doseHistory,
+    ).filter((f) => f.doseId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_doseHistoryRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$DosesTableFilterComposer extends Composer<_$AppDatabase, $DosesTable> {
@@ -1631,6 +1904,31 @@ class $$DosesTableFilterComposer extends Composer<_$AppDatabase, $DosesTable> {
           }) => $$SchedulesTableFilterComposer(
             $db: $db,
             $table: $db.schedules,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> doseHistoryRefs(
+    Expression<bool> Function($$DoseHistoryTableFilterComposer f) f,
+  ) {
+    final $$DoseHistoryTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.doseHistory,
+      getReferencedColumn: (t) => t.doseId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DoseHistoryTableFilterComposer(
+            $db: $db,
+            $table: $db.doseHistory,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -1770,6 +2068,31 @@ class $$DosesTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> doseHistoryRefs<T extends Object>(
+    Expression<T> Function($$DoseHistoryTableAnnotationComposer a) f,
+  ) {
+    final $$DoseHistoryTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.doseHistory,
+      getReferencedColumn: (t) => t.doseId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DoseHistoryTableAnnotationComposer(
+            $db: $db,
+            $table: $db.doseHistory,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$DosesTableTableManager
@@ -1785,7 +2108,11 @@ class $$DosesTableTableManager
           $$DosesTableUpdateCompanionBuilder,
           (Dose, $$DosesTableReferences),
           Dose,
-          PrefetchHooks Function({bool medicationId, bool schedulesRefs})
+          PrefetchHooks Function({
+            bool medicationId,
+            bool schedulesRefs,
+            bool doseHistoryRefs,
+          })
         > {
   $$DosesTableTableManager(_$AppDatabase db, $DosesTable table)
     : super(
@@ -1837,10 +2164,17 @@ class $$DosesTableTableManager
               )
               .toList(),
           prefetchHooksCallback:
-              ({medicationId = false, schedulesRefs = false}) {
+              ({
+                medicationId = false,
+                schedulesRefs = false,
+                doseHistoryRefs = false,
+              }) {
                 return PrefetchHooks(
                   db: db,
-                  explicitlyWatchedTables: [if (schedulesRefs) db.schedules],
+                  explicitlyWatchedTables: [
+                    if (schedulesRefs) db.schedules,
+                    if (doseHistoryRefs) db.doseHistory,
+                  ],
                   addJoins:
                       <
                         T extends TableManagerState<
@@ -1892,6 +2226,27 @@ class $$DosesTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (doseHistoryRefs)
+                        await $_getPrefetchedData<
+                          Dose,
+                          $DosesTable,
+                          DoseHistoryData
+                        >(
+                          currentTable: table,
+                          referencedTable: $$DosesTableReferences
+                              ._doseHistoryRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$DosesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).doseHistoryRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.doseId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -1912,7 +2267,11 @@ typedef $$DosesTableProcessedTableManager =
       $$DosesTableUpdateCompanionBuilder,
       (Dose, $$DosesTableReferences),
       Dose,
-      PrefetchHooks Function({bool medicationId, bool schedulesRefs})
+      PrefetchHooks Function({
+        bool medicationId,
+        bool schedulesRefs,
+        bool doseHistoryRefs,
+      })
     >;
 typedef $$SchedulesTableCreateCompanionBuilder =
     SchedulesCompanion Function({
@@ -2227,6 +2586,280 @@ typedef $$SchedulesTableProcessedTableManager =
       Schedule,
       PrefetchHooks Function({bool doseId})
     >;
+typedef $$DoseHistoryTableCreateCompanionBuilder =
+    DoseHistoryCompanion Function({
+      Value<int> id,
+      required int doseId,
+      required DateTime takenAt,
+    });
+typedef $$DoseHistoryTableUpdateCompanionBuilder =
+    DoseHistoryCompanion Function({
+      Value<int> id,
+      Value<int> doseId,
+      Value<DateTime> takenAt,
+    });
+
+final class $$DoseHistoryTableReferences
+    extends BaseReferences<_$AppDatabase, $DoseHistoryTable, DoseHistoryData> {
+  $$DoseHistoryTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $DosesTable _doseIdTable(_$AppDatabase db) => db.doses.createAlias(
+    $_aliasNameGenerator(db.doseHistory.doseId, db.doses.id),
+  );
+
+  $$DosesTableProcessedTableManager get doseId {
+    final $_column = $_itemColumn<int>('dose_id')!;
+
+    final manager = $$DosesTableTableManager(
+      $_db,
+      $_db.doses,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_doseIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$DoseHistoryTableFilterComposer
+    extends Composer<_$AppDatabase, $DoseHistoryTable> {
+  $$DoseHistoryTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get takenAt => $composableBuilder(
+    column: $table.takenAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$DosesTableFilterComposer get doseId {
+    final $$DosesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.doseId,
+      referencedTable: $db.doses,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DosesTableFilterComposer(
+            $db: $db,
+            $table: $db.doses,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$DoseHistoryTableOrderingComposer
+    extends Composer<_$AppDatabase, $DoseHistoryTable> {
+  $$DoseHistoryTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get takenAt => $composableBuilder(
+    column: $table.takenAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$DosesTableOrderingComposer get doseId {
+    final $$DosesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.doseId,
+      referencedTable: $db.doses,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DosesTableOrderingComposer(
+            $db: $db,
+            $table: $db.doses,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$DoseHistoryTableAnnotationComposer
+    extends Composer<_$AppDatabase, $DoseHistoryTable> {
+  $$DoseHistoryTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get takenAt =>
+      $composableBuilder(column: $table.takenAt, builder: (column) => column);
+
+  $$DosesTableAnnotationComposer get doseId {
+    final $$DosesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.doseId,
+      referencedTable: $db.doses,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DosesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.doses,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$DoseHistoryTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $DoseHistoryTable,
+          DoseHistoryData,
+          $$DoseHistoryTableFilterComposer,
+          $$DoseHistoryTableOrderingComposer,
+          $$DoseHistoryTableAnnotationComposer,
+          $$DoseHistoryTableCreateCompanionBuilder,
+          $$DoseHistoryTableUpdateCompanionBuilder,
+          (DoseHistoryData, $$DoseHistoryTableReferences),
+          DoseHistoryData,
+          PrefetchHooks Function({bool doseId})
+        > {
+  $$DoseHistoryTableTableManager(_$AppDatabase db, $DoseHistoryTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DoseHistoryTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$DoseHistoryTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$DoseHistoryTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> doseId = const Value.absent(),
+                Value<DateTime> takenAt = const Value.absent(),
+              }) => DoseHistoryCompanion(
+                id: id,
+                doseId: doseId,
+                takenAt: takenAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int doseId,
+                required DateTime takenAt,
+              }) => DoseHistoryCompanion.insert(
+                id: id,
+                doseId: doseId,
+                takenAt: takenAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$DoseHistoryTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({doseId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (doseId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.doseId,
+                                referencedTable: $$DoseHistoryTableReferences
+                                    ._doseIdTable(db),
+                                referencedColumn: $$DoseHistoryTableReferences
+                                    ._doseIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$DoseHistoryTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $DoseHistoryTable,
+      DoseHistoryData,
+      $$DoseHistoryTableFilterComposer,
+      $$DoseHistoryTableOrderingComposer,
+      $$DoseHistoryTableAnnotationComposer,
+      $$DoseHistoryTableCreateCompanionBuilder,
+      $$DoseHistoryTableUpdateCompanionBuilder,
+      (DoseHistoryData, $$DoseHistoryTableReferences),
+      DoseHistoryData,
+      PrefetchHooks Function({bool doseId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -2237,4 +2870,6 @@ class $AppDatabaseManager {
       $$DosesTableTableManager(_db, _db.doses);
   $$SchedulesTableTableManager get schedules =>
       $$SchedulesTableTableManager(_db, _db.schedules);
+  $$DoseHistoryTableTableManager get doseHistory =>
+      $$DoseHistoryTableTableManager(_db, _db.doseHistory);
 }
