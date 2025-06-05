@@ -1,6 +1,16 @@
 // lib/core/constants.dart
+import 'medication_matrix.dart';
+
 class Units {
-  static const List<String> volumeUnits = ['mL', 'L', 'CC', 'tsp', 'tbsp', 'drop', 'oz'];
-  static const List<String> doseUnits = ['mg', 'mcg', 'IU'];
-  static const List<String> forms = ['Tablet', 'Capsule', 'Injection'];
+  static const List<String> forms = [
+    'Tablet',
+    'Capsule',
+    'Injection',
+    'Drops',
+    'Inhaler',
+    'Ointment/Cream',
+    'Patch',
+    'Nasal Spray',
+    'Suppository',
+  ];
 }

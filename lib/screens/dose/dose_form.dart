@@ -6,9 +6,13 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:logging/logging.dart';
 import '../../core/calculations.dart';
 import '../../core/constants.dart';
+import '../../core/controller_mixin.dart';
+import '../../core/medication_matrix.dart';
+import '../../core/utils.dart';
 import '../../data/database.dart';
 import '../../services/drift_service.dart';
 import '../../services/notification_service.dart';
+import '../../widgets/form_widgets.dart';
 
 class DoseForm extends ConsumerStatefulWidget {
   final Medication medication;
@@ -28,57 +32,76 @@ class DoseForm extends ConsumerStatefulWidget {
   ConsumerState<DoseForm> createState() => _DoseFormState();
 }
 
-class _DoseFormState extends ConsumerState<DoseForm> {
+class _DoseFormState extends ConsumerState<DoseForm> with ControllerMixin {
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
   final _unitController = TextEditingController();
   final _weightController = TextEditingController();
   final _dosePerKgController = TextEditingController();
   final _timeController = TextEditingController();
+  final _dropSizeController = TextEditingController(text: '0.05');
   Dose? _selectedDose;
   Schedule? _selectedSchedule;
   final _notificationService = NotificationService();
   final Logger _logger = Logger('DoseForm');
   List<String> _selectedDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   String _summary = '';
+  MedicationType _medicationType = MedicationType.tablet;
 
   @override
   void initState() {
     super.initState();
     _notificationService.init();
+    _medicationType = MedicationType.values.firstWhere(
+          (type) => type.toString().split('.').last == widget.medication.form.toLowerCase().replaceAll(' ', ''),
+      orElse: () => MedicationType.tablet,
+    );
     _updateSummary();
-    _amountController.addListener(_updateSummary);
-    _unitController.addListener(_updateSummary);
-    _weightController.addListener(_updateSummary);
-    _dosePerKgController.addListener(_updateSummary);
-    _timeController.addListener(_updateSummary);
+    setupListeners(
+      [_amountController, _unitController, _weightController, _dosePerKgController, _timeController, _dropSizeController],
+      _updateSummary,
+    );
   }
 
   @override
   void dispose() {
-    _amountController.removeListener(_updateSummary);
-    _unitController.removeListener(_updateSummary);
-    _weightController.removeListener(_updateSummary);
-    _dosePerKgController.removeListener(_updateSummary);
-    _timeController.removeListener(_updateSummary);
-    _amountController.dispose();
-    _unitController.dispose();
-    _weightController.dispose();
-    _dosePerKgController.dispose();
-    _timeController.dispose();
+    disposeControllers(
+      [_amountController, _unitController, _weightController, _dosePerKgController, _timeController, _dropSizeController],
+    );
     super.dispose();
   }
 
   void _updateSummary() {
     final amount = double.tryParse(_amountController.text) ?? 0;
-    final unit = _unitController.text.isEmpty ? '' : _unitController.text;
-    final time = _timeController.text.isEmpty ? '' : _timeController.text;
-    final days = _selectedDays.isEmpty ? '' : _selectedDays.join(', ');
-
+    final unit = _unitController.text;
+    final time = _timeController.text;
+    final days = _selectedDays;
+    String? calculatedDose;
+    if (amount > 0 && MedicationMatrix.isCalculationRequired(_medicationType)) {
+      try {
+        final dose = MedicationMatrix.calculateAdministrationDose(
+          type: _medicationType,
+          concentrationValue: widget.medication.concentration,
+          concentrationUnit: widget.medication.concentrationUnit,
+          desiredDose: amount,
+          doseUnit: unit,
+          dropSizeML: _medicationType == MedicationType.drops ? double.tryParse(_dropSizeController.text) ?? 0.05 : null,
+        );
+        calculatedDose = '${dose.toStringAsFixed(2)}${MedicationMatrix.getAdministrationUnits(_medicationType).first}';
+      } catch (e) {
+        calculatedDose = 'Calculation error';
+      }
+    }
     setState(() {
-      _summary = amount > 0
-          ? '${amount.toInt()} x ${amount}${unit} daily${time.isNotEmpty ? ' at $time' : ''}${days.isNotEmpty ? ' on $days' : ''}'
-          : 'No dose specified';
+      _summary = Utils.formatSummary(
+        name: '',
+        amount: amount > 0 ? amount : null,
+        unit: unit.isEmpty ? null : unit,
+        form: 'daily',
+        time: time.isEmpty ? null : time,
+        days: days.isEmpty ? null : days,
+        calculatedDose: calculatedDose,
+      );
     });
   }
 
@@ -87,7 +110,7 @@ class _DoseFormState extends ConsumerState<DoseForm> {
     final dosePerKg = double.tryParse(_dosePerKgController.text);
     final unit = _unitController.text;
 
-    if (weight == null || dosePerKg == null || unit.isEmpty || !Units.doseUnits.contains(unit)) {
+    if (weight == null || dosePerKg == null || unit.isEmpty || !MedicationMatrix.getAdministrationUnits(_medicationType).contains(unit)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a valid dose unit and enter weight and dose per kg')),
       );
@@ -110,10 +133,25 @@ class _DoseFormState extends ConsumerState<DoseForm> {
     final time = _timeController.text;
     final amount = double.tryParse(_amountController.text);
     final unit = _unitController.text;
+    final dropSize = _medicationType == MedicationType.drops ? double.tryParse(_dropSizeController.text) : null;
 
-    if (time.isEmpty || amount == null || unit.isEmpty || !Units.doseUnits.contains(unit)) {
+    if (time.isEmpty || amount == null || unit.isEmpty || !MedicationMatrix.getAdministrationUnits(_medicationType).contains(unit)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a valid dose unit and enter dose details and time')),
+      );
+      return;
+    }
+
+    if (_medicationType == MedicationType.drops && (dropSize == null || dropSize <= 0)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a valid drop size')),
+      );
+      return;
+    }
+
+    if (!MedicationMatrix.isValidValue(_medicationType, amount, 'administration')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Dose value out of valid range (0.01–999)')),
       );
       return;
     }
@@ -223,7 +261,9 @@ class _DoseFormState extends ConsumerState<DoseForm> {
         _timeController.text = _selectedSchedule == null
             ? ''
             : '${_selectedSchedule!.time.hour.toString().padLeft(2, '0')}:${_selectedSchedule!.time.minute.toString().padLeft(2, '0')}';
-        _selectedDays = _selectedSchedule != null ? List.from(_selectedSchedule!.days) : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        _selectedDays = _selectedSchedule != null
+            ? List.from(_selectedSchedule!.days)
+            : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
         _updateSummary();
       });
       widget.onEditDose(dose);
@@ -256,63 +296,55 @@ class _DoseFormState extends ConsumerState<DoseForm> {
               key: _formKey,
               child: Column(
                 children: [
-                  TextFormField(
+                  FormWidgets.buildTextField(
                     controller: _amountController,
-                    decoration: const InputDecoration(
-                      labelText: 'Amount',
-                      helperText: "Enter the dose amount",
-                    ),
+                    label: 'Amount',
+                    helperText: 'Enter the dose amount',
                     keyboardType: TextInputType.number,
-                    validator: (value) {
-                      if (value!.isEmpty) return 'Amount is required';
-                      if (double.tryParse(value) == null) return 'Enter a valid number';
-                      return null;
-                    },
+                    validator: (value) =>
+                    value!.isEmpty ? 'Amount is required' : double.tryParse(value) == null ? 'Enter a valid number' : null,
                   ),
                   const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
+                  FormWidgets.buildDropdown(
+                    label: 'Unit',
+                    helperText: 'Select the dose unit',
+                    items: MedicationMatrix.getAdministrationUnits(_medicationType),
                     value: _unitController.text.isEmpty ? null : _unitController.text,
-                    decoration: const InputDecoration(
-                      labelText: 'Unit',
-                      helperText: 'Select the dose unit (mg, mcg, IU)',
-                    ),
-                    items: Units.doseUnits.map((unit) => DropdownMenuItem(value: unit, child: Text(unit))).toList(),
                     onChanged: (value) => setState(() => _unitController.text = value ?? ''),
                     validator: (value) => value == null ? 'Unit is required' : null,
                   ),
                   const SizedBox(height: 16),
-                  TextFormField(
+                  FormWidgets.buildTextField(
                     controller: _weightController,
-                    decoration: const InputDecoration(
-                      labelText: 'Weight (kg)',
-                      helperText: 'Enter weight for dose calculation (optional)',
-                    ),
+                    label: 'Weight (kg)',
+                    helperText: 'Enter weight for dose calculation (optional)',
                     keyboardType: TextInputType.number,
-                    validator: (value) {
-                      if (value!.isNotEmpty && double.tryParse(value) == null) return 'Enter a valid number';
-                      return null;
-                    },
+                    validator: (value) => value!.isNotEmpty && double.tryParse(value) == null ? 'Enter a valid number' : null,
                   ),
                   const SizedBox(height: 16),
-                  TextFormField(
+                  FormWidgets.buildTextField(
                     controller: _dosePerKgController,
-                    decoration: const InputDecoration(
-                      labelText: 'Dose per kg',
-                      helperText: 'Enter dose per kg for calculation (optional)',
-                    ),
+                    label: 'Dose per kg',
+                    helperText: 'Enter dose per kg for calculation (optional)',
                     keyboardType: TextInputType.number,
-                    validator: (value) {
-                      if (value!.isNotEmpty && double.tryParse(value) == null) return 'Enter a valid number';
-                      return null;
-                    },
+                    validator: (value) => value!.isNotEmpty && double.tryParse(value) == null ? 'Enter a valid number' : null,
                   ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _timeController,
-                    decoration: const InputDecoration(
-                      labelText: 'Time (e.g., 08:00)',
-                      helperText: 'Select the dose administration time',
+                  if (_medicationType == MedicationType.drops) ...[
+                    const SizedBox(height: 16),
+                    FormWidgets.buildTextField(
+                      controller: _dropSizeController,
+                      label: 'Drop Size (mL)',
+                      helperText: 'Enter drop size (e.g., 0.05 mL/drop)',
+                      keyboardType: TextInputType.number,
+                      validator: (value) =>
+                      value!.isEmpty ? 'Drop size is required' : double.tryParse(value) == null ? 'Enter a valid number' : null,
                     ),
+                  ],
+                  const SizedBox(height: 16),
+                  FormWidgets.buildTextField(
+                    controller: _timeController,
+                    label: 'Time (e.g., 08:00)',
+                    helperText: 'Select the dose administration time',
                     keyboardType: TextInputType.datetime,
                     readOnly: true,
                     onTap: () async {

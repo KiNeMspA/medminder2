@@ -1,10 +1,11 @@
-// lib/screens/medication_screen.dart
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/constants.dart';
+import '../core/medication_matrix.dart';
 import '../data/database.dart';
 import '../services/drift_service.dart';
+import '../../widgets/form_widgets.dart';
 
 class MedicationScreen extends ConsumerStatefulWidget {
   final Medication? medication;
@@ -17,78 +18,95 @@ class MedicationScreen extends ConsumerStatefulWidget {
 class _MedicationScreenState extends ConsumerState<MedicationScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _strengthController = TextEditingController();
-  final _unitController = TextEditingController();
-  final _quantityController = TextEditingController();
+  final _concentrationController = TextEditingController(); // Changed from _strengthController
+  final _unitController = TextEditingController(text: 'mg'); // Default to mg
+  final _stockController = TextEditingController(); // Changed from _quantityController
   String? _selectedForm;
+  MedicationType? _selectedType;
   String _summary = '';
 
   @override
   void initState() {
     super.initState();
     if (widget.medication != null) {
-      _nameController.text = widget.medication!.name;
-      _strengthController.text = widget.medication!.concentration.toString();
-      _unitController.text = widget.medication!.concentrationUnit;
-      _quantityController.text = widget.medication!.stockQuantity.toString();
-      _selectedForm = widget.medication!.form;
+      final med = widget.medication!;
+      _nameController.text = med.name;
+      _concentrationController.text = med.concentration.toString();
+      _unitController.text = med.concentrationUnit.isEmpty ? 'mg' : med.concentrationUnit;
+      _stockController.text = med.stockQuantity.toString();
+      _selectedForm = med.form;
+      _selectedType = MedicationType.values.firstWhere(
+            (type) => type.toString().split('.').last == med.form.toLowerCase().replaceAll(' ', ''),
+        orElse: () => MedicationType.tablet,
+      );
       _updateSummary();
     }
     _nameController.addListener(_updateSummary);
-    _strengthController.addListener(_updateSummary);
+    _concentrationController.addListener(_updateSummary);
     _unitController.addListener(_updateSummary);
-    _quantityController.addListener(_updateSummary);
+    _stockController.addListener(_updateSummary);
   }
 
   @override
   void dispose() {
-    _nameController.removeListener(_updateSummary);
-    _strengthController.removeListener(_updateSummary);
-    _unitController.removeListener(_updateSummary);
-    _quantityController.removeListener(_updateSummary);
-    _nameController.dispose();
-    _strengthController.dispose();
-    _unitController.dispose();
-    _quantityController.dispose();
+    _nameController
+      ..removeListener(_updateSummary)
+      ..dispose();
+    _concentrationController
+      ..removeListener(_updateSummary)
+      ..dispose();
+    _unitController
+      ..removeListener(_updateSummary)
+      ..dispose();
+    _stockController
+      ..removeListener(_updateSummary)
+      ..dispose();
     super.dispose();
   }
 
   void _updateSummary() {
-    final name = _nameController.text.isEmpty ? 'Unnamed' : _nameController.text;
-    final strength = double.tryParse(_strengthController.text) ?? 0;
-    final unit = _unitController.text.isEmpty ? '' : _unitController.text;
-    final quantity = double.tryParse(_quantityController.text) ?? 0;
+    if (_nameController.text.isEmpty) {
+      setState(() => _summary = '');
+      return;
+    }
+    final name = _nameController.text;
+    final concentration = double.tryParse(_concentrationController.text) ?? 0;
+    final unit = _unitController.text;
+    final stock = double.tryParse(_stockController.text) ?? 0;
     final form = _selectedForm ?? 'Medication';
-    final totalAmount = strength * quantity;
-
+    final total = concentration * stock;
     setState(() {
-      _summary = '$quantity x ${strength > 0 ? strength : ''}${unit.isNotEmpty ? unit : ''} $name ${form}s${totalAmount > 0 ? ' (${totalAmount}${unit} total)' : ''}';
+      _summary = '$stock x ${concentration > 0 ? concentration : ''}$unit $name $form${total > 0 ? ' (${total}$unit total)' : ''}';
     });
   }
 
   void _saveMedication() {
-    if (_formKey.currentState!.validate()) {
-      final name = _nameController.text;
-      final strength = double.parse(_strengthController.text);
-      final unit = _unitController.text;
-      final quantity = double.parse(_quantityController.text);
+    if (!_formKey.currentState!.validate()) return;
 
-      final medication = MedicationsCompanion(
-        name: drift.Value(name),
-        concentration: drift.Value(strength),
-        concentrationUnit: drift.Value(unit),
-        stockQuantity: drift.Value(quantity),
-        form: drift.Value(_selectedForm!),
+    final concentration = double.parse(_concentrationController.text);
+    final stock = double.parse(_stockController.text);
+
+    if (!MedicationMatrix.isValidValue(_selectedType!, concentration, 'concentration') ||
+        !MedicationMatrix.isValidValue(_selectedType!, stock, 'quantity')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Values out of valid range (0.01–999)')),
       );
-
-      ref.read(driftServiceProvider).addMedication(medication).then((_) {
-        Navigator.pop(context);
-      }).catchError((e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving medication: $e')),
-        );
-      });
+      return;
     }
+
+    final medication = MedicationsCompanion(
+      name: drift.Value(_nameController.text),
+      concentration: drift.Value(concentration),
+      concentrationUnit: drift.Value(_unitController.text),
+      stockQuantity: drift.Value(stock),
+      form: drift.Value(_selectedForm!),
+    );
+
+    ref.read(driftServiceProvider).addMedication(medication).then((_) {
+      Navigator.pop(context);
+    }).catchError((e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    });
   }
 
   @override
@@ -97,28 +115,37 @@ class _MedicationScreenState extends ConsumerState<MedicationScreen> {
       appBar: AppBar(title: Text(widget.medication?.name ?? 'Add Medication')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
+        child: _selectedForm == null
+            ? Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (_selectedForm == null) ...[
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(
-                  labelText: 'Medication Type',
-                  helperText: 'Select the type of medication',
-                ),
-                items: Units.forms.map((form) => DropdownMenuItem(value: form, child: Text(form))).toList(),
-                onChanged: (value) => setState(() {
-                  _selectedForm = value;
-                  _updateSummary();
-                }),
-                validator: (value) => value == null ? 'Please select a type' : null,
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () => setState(() {}),
-                child: const Text('Continue'),
-              ),
-            ] else ...[
+            FormWidgets.buildDropdown(
+              label: 'Medication Type',
+              helperText: 'Choose whether the medication is a tablet or injection',
+              items: ['Tablet', 'Injection'], // Limited to Tablet and Injection
+              value: _selectedForm,
+              onChanged: (value) => setState(() {
+                _selectedForm = value;
+                _selectedType = MedicationType.values.firstWhere(
+                      (type) => type.toString().split('.').last == value!.toLowerCase().replaceAll(' ', ''),
+                  orElse: () => MedicationType.tablet,
+                );
+                _unitController.text = 'mg';
+                _updateSummary();
+              }),
+              validator: (value) => value == null ? 'Please select a type' : null,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () => setState(() {}),
+              child: const Text('Continue'),
+            ),
+          ],
+        )
+            : Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (_summary.isNotEmpty)
               Text(
                 _summary,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -126,92 +153,80 @@ class _MedicationScreenState extends ConsumerState<MedicationScreen> {
                   color: Theme.of(context).colorScheme.primary,
                 ),
               ),
-              const SizedBox(height: 24),
-              Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    TextFormField(
-                      controller: _nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Medication Name',
-                        helperText: "Enter the medication's name",
-                      ),
-                      validator: (value) => value!.isEmpty ? 'Name is required' : null,
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      children: [
-                        Expanded(
-                          flex: 2,
-                          child: TextFormField(
-                            controller: _strengthController,
-                            decoration: const InputDecoration(
-                              labelText: 'Strength',
-                              helperText: 'Enter strength (mg, mcg, IU)',
-                              helperMaxLines: 2,
-                            ),
-                            keyboardType: TextInputType.number,
-                            validator: (value) {
-                              if (value!.isEmpty) return 'Strength is required';
-                              if (double.tryParse(value) == null) return 'Enter a valid number';
-                              return null;
-                            },
-                          ),
+            const SizedBox(height: 24),
+            Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  FormWidgets.buildTextField(
+                    controller: _nameController,
+                    label: 'Medication Name',
+                    helperText: 'Enter the full name of the medication (e.g., Ibuprofen)',
+                    validator: (value) => value!.isEmpty ? 'Name is required' : null,
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: FormWidgets.buildTextField(
+                          controller: _concentrationController,
+                          label: 'Concentration',
+                          helperText: 'Enter the active compound amount (e.g., 5mg, 10g)',
+                          keyboardType: TextInputType.number,
+                          validator: (value) =>
+                          value!.isEmpty ? 'Concentration is required' : double.tryParse(value) == null ? 'Enter a valid number' : null,
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          flex: 1,
-                          child: DropdownButtonFormField<String>(
-                            value: _unitController.text.isEmpty ? null : _unitController.text,
-                            decoration: const InputDecoration(
-                              labelText: 'Unit',
-                              helperText: ' ',
-                            ),
-                            items: Units.doseUnits.map((unit) => DropdownMenuItem(value: unit, child: Text(unit))).toList(),
-                            onChanged: (value) => setState(() => _unitController.text = value ?? ''),
-                            validator: (value) => value == null ? 'Unit is required' : null,
-                          ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 1,
+                        child: FormWidgets.buildDropdown(
+                          label: 'Unit',
+                          helperText: 'Unit (e.g., mg)',
+                          items: MedicationMatrix.getConcentrationUnits(_selectedType!),
+                          value: _unitController.text.isEmpty ? 'mg' : _unitController.text,
+                          onChanged: (value) => setState(() => _unitController.text = value ?? 'mg'),
+                          validator: (value) => value == null ? 'Unit is required' : null,
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    TextFormField(
-                      controller: _quantityController,
-                      decoration: InputDecoration(
-                        labelText: 'Available Quantity',
-                        helperText: 'How many ${_selectedForm!.toLowerCase()}s in stock',
                       ),
-                      keyboardType: TextInputType.number,
-                      validator: (value) {
-                        if (value!.isEmpty) return 'Quantity is required';
-                        if (double.tryParse(value) == null) return 'Enter a valid number';
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 24),
-                    DropdownButtonFormField<String>(
-                      value: _selectedForm,
-                      decoration: const InputDecoration(
-                        labelText: 'Type',
-                        helperText: 'Confirm the medication type',
-                      ),
-                      items: Units.forms.map((form) => DropdownMenuItem(value: form, child: Text(form))).toList(),
-                      onChanged: (value) => setState(() {
-                        _selectedForm = value;
-                        _updateSummary();
-                      }),
-                      validator: (value) => value == null ? 'Form is required' : null,
-                    ),
-                    const SizedBox(height: 32),
-                    ElevatedButton(
-                      onPressed: _saveMedication,
-                      child: const Text('Save Medication'),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  FormWidgets.buildTextField(
+                    controller: _stockController,
+                    label: 'Stock Quantity',
+                    helperText: 'Enter the number of tablets in stock',
+                    keyboardType: TextInputType.number,
+                    validator: (value) =>
+                    value!.isEmpty ? 'Stock quantity is required' : double.tryParse(value) == null ? 'Enter a valid number' : null,
+                  ),
+                  const SizedBox(height: 24),
+                  FormWidgets.buildDropdown(
+                    label: 'Medication Type',
+                    helperText: 'Confirm medication type',
+                    items: ['Tablet', 'Injection'],
+                    value: _selectedForm,
+                    onChanged: (value) => setState(() {
+                      _selectedForm = value;
+                      _selectedType = MedicationType.values.firstWhere(
+                            (type) => type.toString().split('.').last == value!.toLowerCase().replaceAll(' ', ''),
+                        orElse: () => MedicationType.tablet,
+                      );
+                      _unitController.text = 'mg';
+                      _updateSummary();
+                    }),
+                    validator: (value) => value == null ? 'Medication type is required' : null,
+                  ),
+                  const SizedBox(height: 32),
+                  ElevatedButton(
+                    onPressed: _saveMedication,
+                    child: const Text('Save Medication'),
+                  ),
+                ],
               ),
-            ],
+            ),
           ],
         ),
       ),

@@ -1,4 +1,5 @@
 // lib/services/drift_service.dart
+import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/database.dart';
 import 'package:logging/logging.dart';
@@ -74,5 +75,10 @@ class DriftService {
 
   Future<void> copyDatabaseToPublicDirectory() async {
     await _db.copyDatabaseToPublicDirectory();
+  }
+
+  Future<void> saveEntity<T extends Insertable<T>>(TableInfo table, T entity) async {
+    _logger.info('Saving entity: $entity to table ${table.actualTableName}');
+    await _db.into(table).insert(entity, mode: InsertMode.insertOrReplace);
   }
 }
