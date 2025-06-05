@@ -22,7 +22,7 @@ class ScheduleScreen extends ConsumerStatefulWidget {
 class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
   final _formKey = GlobalKey<FormState>();
   String _frequency = 'Daily';
-  List<String> _selectedDays = [];
+  List<String> _days = [];
   TimeOfDay _selectedTime = TimeOfDay.now();
   final List<String> _daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -71,9 +71,9 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                       setState(() {
                         _frequency = value!;
                         if (_frequency == 'Daily') {
-                          _selectedDays = _daysOfWeek;
+                          _days = _daysOfWeek;
                         } else {
-                          _selectedDays = [];
+                          _days = [];
                         }
                       });
                     },
@@ -99,16 +99,16 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                         Wrap(
                           spacing: 8,
                           children: _daysOfWeek.map((day) {
-                            final isSelected = _selectedDays.contains(day);
+                            final isSelected = _days.contains(day);
                             return ChoiceChip(
                               label: Text(day),
                               selected: isSelected,
                               onSelected: (selected) {
                                 setState(() {
                                   if (selected) {
-                                    _selectedDays.add(day);
+                                    _days.add(day);
                                   } else {
-                                    _selectedDays.remove(day);
+                                    _days.remove(day);
                                   }
                                 });
                               },
@@ -147,7 +147,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
               ElevatedButton(
                 onPressed: () async {
                   if (!_formKey.currentState!.validate()) return;
-                  if (_frequency == 'Weekly' && _selectedDays.isEmpty) {
+                  if (_frequency == 'Weekly' && _days.isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Please select at least one day')),
                     );
@@ -157,7 +157,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                   final schedule = SchedulesCompanion(
                     doseId: drift.Value(widget.dose.id),
                     frequency: drift.Value(_frequency),
-                    days: drift.Value(_frequency == 'Daily' ? _daysOfWeek : _selectedDays),
+                    days: drift.Value(_frequency == 'Daily' ? _daysOfWeek : _days),
                     time: drift.Value(DateTime.now().copyWith(
                       hour: _selectedTime.hour,
                       minute: _selectedTime.minute,
@@ -167,19 +167,22 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                   try {
                     await ref.read(driftServiceProvider).addSchedule(schedule);
                     final notificationService = NotificationService();
-                    final tzTime = tz.TZDateTime.now(tz.local).copyWith(
-                      hour: _selectedTime.hour,
-                      minute: _selectedTime.minute,
-                      second: 0,
-                      millisecond: 0,
-                      microsecond: 0,
+                    final tzTime = tz.TZDateTime.from(
+                      DateTime.now().copyWith(
+                        hour: _selectedTime.hour,
+                        minute: _selectedTime.minute,
+                        second: 0,
+                        millisecond: 0,
+                        microsecond: 0,
+                      ),
+                      tz.local,
                     );
                     await notificationService.scheduleNotification(
                       'dose_${widget.dose.id}',
                       'Medication Reminder: ${widget.medication.name}',
                       'Time to take ${widget.dose.amount} ${widget.dose.unit} of ${widget.dose.name ?? 'Unnamed'}',
                       tzTime,
-                      days: _frequency == 'Daily' ? _daysOfWeek : _selectedDays,
+                      days: _frequency == 'Daily' ? _daysOfWeek : _days,
                     );
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Schedule saved')),
