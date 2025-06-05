@@ -1,7 +1,9 @@
 // lib/widgets/medication_card.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../data/database.dart';
+import '../services/drift_service.dart';
 
 class MedicationCard extends ConsumerWidget {
   final Medication medication;
@@ -28,12 +30,45 @@ class MedicationCard extends ConsumerWidget {
           medication.name,
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
             fontWeight: FontWeight.bold,
-            color: Colors.purple,
+            color: Theme.of(context).colorScheme.primary,
           ),
         ),
-        subtitle: Text(
-          stockText,
-          style: Theme.of(context).textTheme.bodyLarge,
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              stockText,
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+            FutureBuilder<List<Dose>>(
+              future: ref.read(driftServiceProvider).getDoses(medication.id),
+              builder: (context, doseSnapshot) {
+                if (doseSnapshot.connectionState == ConnectionState.waiting || !doseSnapshot.hasData) {
+                  return const SizedBox.shrink();
+                }
+                final doses = doseSnapshot.data!;
+                return FutureBuilder<List<Schedule>>(
+                  future: Future.wait(doses.map((dose) => ref.read(driftServiceProvider).getSchedules(dose.id))),
+                  builder: (context, scheduleSnapshot) {
+                    if (scheduleSnapshot.connectionState == ConnectionState.waiting || !scheduleSnapshot.hasData) {
+                      return const SizedBox.shrink();
+                    }
+                    final allSchedules = scheduleSnapshot.data!.expand((schedules) => schedules).toList();
+                    if (allSchedules.isEmpty) return const SizedBox.shrink();
+                    final scheduleText = allSchedules
+                        .map((s) => s.frequency == 'Daily'
+                        ? 'Daily at ${DateFormat.jm().format(s.time)}'
+                        : '${s.days.join(', ')} at ${DateFormat.jm().format(s.time)}')
+                        .join('; ');
+                    return Text(
+                      'Schedules: $scheduleText',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.black54),
+                    );
+                  },
+                );
+              },
+            ),
+          ],
         ),
         onTap: onTap,
         trailing: IconButton(

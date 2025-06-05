@@ -41,14 +41,20 @@ class Schedules extends Table {
   DateTimeColumn get time => dateTime()();
 }
 
-@DriftDatabase(tables: [Medications, Doses, Schedules])
+class DoseHistory extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get doseId => integer().references(Doses, #id)();
+  DateTimeColumn get takenAt => dateTime()();
+}
+
+@DriftDatabase(tables: [Medications, Doses, Schedules, DoseHistory])
 class AppDatabase extends _$AppDatabase {
   final Logger _logger = Logger('AppDatabase');
 
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -62,12 +68,23 @@ class AppDatabase extends _$AppDatabase {
         await m.createIndex(Index('medications', 'UNIQUE(name)'));
         _logger.info('Added unique constraint to Medications name');
       }
+      if (from <= 3) {
+        await m.createTable(doseHistory);
+        _logger.info('Created DoseHistory table');
+      }
     },
   );
 
   Future<void> addMedication(MedicationsCompanion med) async {
     _logger.info('Adding medication: $med');
     await into(medications).insert(med);
+  }
+
+  Future<void> updateMedicationStock(int id, double newQuantity) async {
+    _logger.info('Updating medication stock: id=$id, newQuantity=$newQuantity');
+    await (update(medications)..where((m) => m.id.equals(id))).write(
+      MedicationsCompanion(stockQuantity: Value(newQuantity)),
+    );
   }
 
   Future<List<Medication>> getMedications() => select(medications).get();
@@ -104,6 +121,7 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> deleteDose(int id) async {
     await (delete(schedules)..where((s) => s.doseId.equals(id))).go();
+    await (delete(doseHistory)..where((h) => h.doseId.equals(id))).go();
     await (delete(doses)..where((d) => d.id.equals(id))).go();
     await _logDatabaseFileStatus();
   }
@@ -119,6 +137,12 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> deleteSchedule(int id) =>
       (delete(schedules)..where((s) => s.id.equals(id))).go();
+
+  Future<void> addDoseHistory(DoseHistoryCompanion history) async {
+    _logger.info('Adding dose history: $history');
+    await into(doseHistory).insert(history);
+    await _logDatabaseFileStatus();
+  }
 
   Future<void> copyDatabaseToPublicDirectory() async {
     final dbFolder = await getApplicationDocumentsDirectory();

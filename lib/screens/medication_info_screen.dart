@@ -1,6 +1,7 @@
 // lib/screens/medication_info_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../core/calculations.dart';
 import '../data/database.dart';
 import '../services/drift_service.dart';
@@ -105,16 +106,20 @@ class MedicationInfoScreen extends ConsumerWidget {
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
                 const SizedBox(height: 24),
-                ElevatedButton.icon(
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => DoseScreen(medication: medication)),
-                  ),
-                  icon: const Icon(Icons.medication),
-                  label: const Text('Manage Doses'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  child: ListTile(
+                    title: Text(
+                      'Manage Doses',
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                    trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => DoseScreen(medication: medication)),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -135,68 +140,164 @@ class MedicationInfoScreen extends ConsumerWidget {
                       style: TextStyle(fontSize: 16, color: Colors.grey),
                     ),
                   )
-                      : ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: doses.length,
-                    separatorBuilder: (context, index) => const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      final dose = doses[index];
-                      return ListTile(
-                        title: Text.rich(
-                          TextSpan(
-                            children: [
+                      : Column(
+                    children: doses.map((dose) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ListTile(
+                            title: Text.rich(
                               TextSpan(
-                                text: dose.name ?? 'Unnamed',
-                                style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
-                              ),
-                              TextSpan(
-                                text: ' - ${dose.amount} ${dose.unit == 'Tablet' ? 'Tablet${dose.amount == 1 ? '' : 's'}' : dose.unit} '
-                                    '${dose.unit == 'Tablet' ? '(${MedCalculations.formatNumber(dose.amount * medication.concentration)} ${medication.concentrationUnit})' : ''}',
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: Colors.black54,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () {
-                            showDialog(
-                              context: context,
-                              builder: (context) => AlertDialog(
-                                title: const Text('Confirm Deletion'),
-                                content: const Text('Are you sure you want to delete this dose?'),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    child: const Text('Cancel'),
+                                children: [
+                                  TextSpan(
+                                    text: dose.name ?? 'Unnamed',
+                                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
                                   ),
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      ref.read(driftServiceProvider).deleteDose(dose.id).then((_) {
-                                        ref.invalidate(dosesProvider(medication.id));
-                                        Navigator.pop(context);
-                                      });
-                                    },
-                                    child: const Text('Delete'),
+                                  TextSpan(
+                                    text: ' - ${dose.amount} ${dose.unit == 'Tablet' ? 'Tablet${dose.amount == 1 ? '' : 's'}' : dose.unit} '
+                                        '${dose.unit == 'Tablet' ? '(${MedCalculations.formatNumber(dose.amount * medication.concentration)} ${medication.concentrationUnit})' : ''}',
+                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: Colors.black54,
+                                      fontSize: 14,
+                                    ),
                                   ),
                                 ],
                               ),
-                            );
-                          },
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => DoseScreen(medication: medication),
+                            ),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: const Text('Confirm Deletion'),
+                                    content: const Text('Are you sure you want to delete this dose?'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () {
+                                          ref.read(driftServiceProvider).deleteDose(dose.id).then((_) {
+                                            ref.invalidate(dosesProvider(medication.id));
+                                            Navigator.pop(context);
+                                          });
+                                        },
+                                        child: const Text('Delete'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => DoseScreen(medication: medication),
+                              ),
+                            ),
                           ),
-                        ),
+                          FutureBuilder<List<Schedule>>(
+                            future: ref.read(driftServiceProvider).getSchedules(dose.id),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState == ConnectionState.waiting) {
+                                return const Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 16.0),
+                                  child: CircularProgressIndicator(),
+                                );
+                              }
+                              final schedules = snapshot.data ?? [];
+                              if (schedules.isEmpty) return const SizedBox.shrink();
+                              return Padding(
+                                padding: const EdgeInsets.only(left: 16.0, bottom: 16.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Schedules',
+                                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    ...schedules.map((schedule) {
+                                      final time = DateFormat.jm().format(schedule.time);
+                                      final days = schedule.frequency == 'Daily' ? 'Daily' : schedule.days.join(', ');
+                                      return ListTile(
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        title: Text(
+                                          '$days at $time',
+                                          style: Theme.of(context).textTheme.bodyMedium,
+                                        ),
+                                        trailing: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            IconButton(
+                                              icon: const Icon(Icons.check_circle, color: Colors.green),
+                                              onPressed: () {
+                                                final history = DoseHistoryCompanion(
+                                                  doseId: Value(dose.id),
+                                                  takenAt: Value(DateTime.now()),
+                                                );
+                                                ref.read(driftServiceProvider).addDoseHistory(history).then((_) {
+                                                  if (dose.unit == 'Tablet') {
+                                                    final newQuantity = medication.stockQuantity - dose.amount;
+                                                    if (newQuantity >= 0) {
+                                                      ref.read(driftServiceProvider).updateMedicationStock(medication.id, newQuantity);
+                                                      ref.invalidate(dosesProvider(medication.id));
+                                                    } else {
+                                                      ScaffoldMessenger.of(context).showSnackBar(
+                                                        const SnackBar(content: Text('Insufficient stock')),
+                                                      );
+                                                      return;
+                                                    }
+                                                  }
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    const SnackBar(content: Text('Dose marked as taken')),
+                                                  );
+                                                });
+                                              },
+                                            ),
+                                            IconButton(
+                                              icon: const Icon(Icons.delete, color: Colors.red),
+                                              onPressed: () {
+                                                showDialog(
+                                                  context: context,
+                                                  builder: (context) => AlertDialog(
+                                                    title: const Text('Confirm Deletion'),
+                                                    content: const Text('Are you sure you want to delete this schedule?'),
+                                                    actions: [
+                                                      TextButton(
+                                                        onPressed: () => Navigator.pop(context),
+                                                        child: const Text('Cancel'),
+                                                      ),
+                                                      ElevatedButton(
+                                                        onPressed: () {
+                                                          ref.read(driftServiceProvider).deleteSchedule(schedule.id).then((_) {
+                                                            ref.invalidate(dosesProvider(medication.id));
+                                                            Navigator.pop(context);
+                                                          });
+                                                        },
+                                                        child: const Text('Delete'),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    }),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                          const Divider(height: 1),
+                        ],
                       );
-                    },
+                    }).toList(),
                   ),
                   loading: () => const Center(child: CircularProgressIndicator()),
                   error: (e, _) => Center(child: Text('Error: $e')),
