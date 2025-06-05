@@ -18,7 +18,7 @@ class FormWidgets {
     String? dropdownCurrentValue = dropdownValue;
     String? errorText;
 
-    return await showDialog<String>(
+    return await showDialog<String?>(
       context: context,
       builder: (context) {
         return StatefulBuilder(
@@ -45,71 +45,59 @@ class FormWidgets {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxWidth: MediaQuery.of(context).size.width * 0.9 - 48,
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: controller,
-                              decoration: InputDecoration(
-                                labelText: label,
-                                helperText: helperText,
-                                helperMaxLines: 1,
-                                errorText: errorText,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                filled: true,
-                                fillColor: Colors.grey[100],
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                              ),
-                              keyboardType: keyboardType,
-                              textCapitalization: TextCapitalization.words,
-                              autofocus: true,
-                              style: Theme.of(context).textTheme.bodyLarge,
-                              onChanged: (value) {
-                                setState(() {
-                                  errorText = validator?.call(value);
-                                });
-                              },
+                    if (dropdownItems != null && dropdownItems.isNotEmpty) ...[
+                      SizedBox(
+                        width: double.infinity,
+                        child: DropdownButtonFormField<String>(
+                          decoration: InputDecoration(
+                            labelText: label,
+                            helperText: helperText,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
                             ),
+                            filled: true,
+                            fillColor: Colors.grey[100],
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           ),
-                          if (dropdownItems != null) ...[
-                            const SizedBox(width: 8),
-                            SizedBox(
-                              width: 120,
-                              child: DropdownButtonFormField<String>(
-                                decoration: InputDecoration(
-                                  labelText: 'Unit',
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  filled: true,
-                                  fillColor: Colors.grey[100],
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                ),
-                                value: dropdownCurrentValue,
-                                items: dropdownItems
-                                    .map((item) => DropdownMenuItem(value: item, child: Text(item)))
-                                    .toList(),
-                                onChanged: (value) {
-                                  setState(() {
-                                    dropdownCurrentValue = value;
-                                    onDropdownChanged?.call(value);
-                                  });
-                                },
-                                style: Theme.of(context).textTheme.bodyLarge,
-                                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-                              ),
-                            ),
-                          ],
-                        ],
+                          value: dropdownCurrentValue,
+                          items: dropdownItems
+                              .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+                              .toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              dropdownCurrentValue = value;
+                              onDropdownChanged?.call(value);
+                            });
+                          },
+                          validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                        ),
                       ),
-                    ),
+                    ] else ...[
+                      TextFormField(
+                        controller: controller,
+                        decoration: InputDecoration(
+                          labelText: label,
+                          helperText: helperText,
+                          helperMaxLines: 1,
+                          errorText: errorText,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey[100],
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                        keyboardType: keyboardType,
+                        textCapitalization: TextCapitalization.words,
+                        autofocus: true,
+                        style: Theme.of(context).textTheme.bodyLarge,
+                        onChanged: (value) {
+                          setState(() {
+                            errorText = validator?.call(value);
+                          });
+                        },
+                      ),
+                    ],
                     const SizedBox(height: 24),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
@@ -123,13 +111,22 @@ class FormWidgets {
                         ),
                         ElevatedButton(
                           onPressed: () {
-                            final textError = validator?.call(controller.text);
-                            final dropdownError = dropdownItems != null && dropdownCurrentValue == null ? 'Required' : null;
-                            setState(() {
-                              errorText = textError;
-                            });
-                            if (textError == null && dropdownError == null) {
-                              Navigator.pop(context, controller.text);
+                            if (dropdownItems != null) {
+                              if (dropdownCurrentValue != null) {
+                                Navigator.pop(context, dropdownCurrentValue);
+                              } else {
+                                setState(() {
+                                  errorText = 'Please select an option';
+                                });
+                              }
+                            } else {
+                              final textError = validator?.call(controller.text);
+                              setState(() {
+                                errorText = textError;
+                              });
+                              if (textError == null) {
+                                Navigator.pop(context, controller.text);
+                              }
                             }
                           },
                           style: ElevatedButton.styleFrom(

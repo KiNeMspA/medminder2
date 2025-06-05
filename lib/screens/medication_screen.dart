@@ -84,9 +84,12 @@ class _MedicationScreenState extends ConsumerState<MedicationScreen> {
     if (widget.medication == null) return false;
     final doses = await ref.read(driftServiceProvider).getDoses(widget.medication!.id);
     if (doses.isNotEmpty) return true;
-    for (final dose in doses) {
-      final schedules = await ref.read(driftServiceProvider).getSchedules(dose.id);
-      if (schedules.isNotEmpty) return true;
+    final schedules = await ref.read(driftServiceProvider).getSchedules();
+    for (final schedule in schedules) {
+      final scheduleDoses = await ref.read(driftServiceProvider).getDosesForSchedule(schedule.id);
+      if (scheduleDoses.any((dose) => dose.medicationId == widget.medication!.id)) {
+        return true;
+      }
     }
     return false;
   }
@@ -96,8 +99,62 @@ class _MedicationScreenState extends ConsumerState<MedicationScreen> {
     return !medications.any((med) => med.name.toLowerCase() == name.toLowerCase() && (widget.medication == null || med.id != widget.medication!.id));
   }
 
+  Future<void> _editField({
+    required String title,
+    required String label,
+    required TextEditingController controller,
+    String? helperText,
+    TextInputType? keyboardType,
+  }) async {
+    final result = await FormWidgets.showInputDialog(
+      context: context,
+      title: title,
+      initialValue: controller.text,
+      label: label,
+      helperText: helperText,
+      keyboardType: keyboardType,
+      validator: (value) => value!.isEmpty
+          ? '$label is required'
+          : keyboardType == TextInputType.number && double.tryParse(value) == null
+          ? 'Enter a valid number'
+          : null,
+    );
+    if (result != null) {
+      setState(() {
+        controller.text = result;
+      });
+    }
+  }
+
+  Future<void> _editType() async {
+    final result = await FormWidgets.showInputDialog(
+      context: context,
+      title: 'Select Medication Type',
+      initialValue: _selectedForm ?? 'Tablet',
+      label: 'Medication Type',
+      helperText: 'Choose whether the medication is a tablet or injection',
+      dropdownItems: ['Tablet', 'Injection'],
+      dropdownValue: _selectedForm ?? 'Tablet',
+      validator: (value) => value!.isEmpty ? 'Medication Type is required' : null,
+    );
+    if (result != null) {
+      setState(() {
+        _selectedForm = result;
+        _selectedType = MedicationType.values.firstWhere(
+              (type) => type.toString().split('.').last == result.toLowerCase().replaceAll(' ', ''),
+          orElse: () => MedicationType.tablet,
+        );
+        _unitController.text = 'mg';
+        _updateSummary();
+      });
+    }
+  }
+
   void _saveMedication() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      print('Form validation failed in MedicationScreen');
+      return;
+    }
 
     final name = _nameController.text;
     final concentration = double.parse(_concentrationController.text);
@@ -164,33 +221,6 @@ class _MedicationScreenState extends ConsumerState<MedicationScreen> {
     });
   }
 
-  Future<void> _editField({
-    required String title,
-    required String label,
-    required TextEditingController controller,
-    String? helperText,
-    TextInputType? keyboardType,
-  }) async {
-    final result = await FormWidgets.showInputDialog(
-      context: context,
-      title: title,
-      initialValue: controller.text,
-      label: label,
-      helperText: helperText,
-      keyboardType: keyboardType,
-      validator: (value) => value!.isEmpty
-          ? '$label is required'
-          : keyboardType == TextInputType.number && double.tryParse(value) == null
-          ? 'Enter a valid number'
-          : null,
-    );
-    if (result != null) {
-      setState(() {
-        controller.text = result;
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -202,43 +232,37 @@ class _MedicationScreenState extends ConsumerState<MedicationScreen> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: _selectedForm == null
+        child: _selectedForm == null && widget.medication == null
             ? Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const Text(
+              'Select Medication Type',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
             Card(
               elevation: 2,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: DropdownButtonFormField<String>(
-                  decoration: InputDecoration(
-                    labelText: 'Medication Type',
-                    helperText: 'Choose whether the medication is a tablet or injection',
-                    border: InputBorder.none,
-                  ),
-                  value: _selectedForm,
-                  items: ['Tablet', 'Injection']
-                      .map((item) => DropdownMenuItem(value: item, child: Text(item)))
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedForm = value;
-                      _selectedType = MedicationType.values.firstWhere(
-                            (type) => type.toString().split('.').last == value!.toLowerCase().replaceAll(' ', ''),
-                        orElse: () => MedicationType.tablet,
-                      );
-                      _unitController.text = 'mg';
-                      _updateSummary();
-                    });
-                  },
-                  validator: (value) => value == null ? 'Medication Type is required' : null,
-                ),
+              child: ListTile(
+                title: const Text('Medication Type'),
+                subtitle: const Text('Choose whether the medication is a tablet or injection'),
+                trailing: const Icon(Icons.arrow_drop_down),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                onTap: _editType,
               ),
             ),
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: () => setState(() {}),
+              onPressed: () {
+                if (_selectedForm != null) {
+                  setState(() {});
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please select a medication type')),
+                  );
+                }
+              },
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -350,31 +374,14 @@ class _MedicationScreenState extends ConsumerState<MedicationScreen> {
                   Card(
                     elevation: 2,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: DropdownButtonFormField<String>(
-                        decoration: InputDecoration(
-                          labelText: 'Medication Type',
-                          helperText: 'Confirm the medication is a tablet or injection',
-                          border: InputBorder.none,
-                        ),
-                        value: _selectedForm,
-                        items: ['Tablet', 'Injection']
-                            .map((item) => DropdownMenuItem(value: item, child: Text(item)))
-                            .toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedForm = value;
-                            _selectedType = MedicationType.values.firstWhere(
-                                  (type) => type.toString().split('.').last == value!.toLowerCase().replaceAll(' ', ''),
-                              orElse: () => MedicationType.tablet,
-                            );
-                            _unitController.text = 'mg';
-                            _updateSummary();
-                          });
-                        },
-                        validator: (value) => value == null ? 'Medication Type is required' : null,
+                    child: ListTile(
+                      title: Text(
+                        'Medication Type: ${_selectedForm ?? 'Not set'}',
+                        style: Theme.of(context).textTheme.bodyLarge,
                       ),
+                      trailing: const Icon(Icons.edit, color: Colors.grey),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      onTap: _editType,
                     ),
                   ),
                   const SizedBox(height: 32),
