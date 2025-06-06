@@ -1,3 +1,4 @@
+// lib/features/medication/widgets/medication_form_field.dart
 import 'package:flutter/material.dart';
 import 'medication_form_card.dart';
 import '../constants/medication_form_constants.dart';
@@ -32,7 +33,9 @@ class MedicationFormField extends StatelessWidget {
             Expanded(
               child: TextFormField(
                 controller: controller,
-                decoration: MedicationFormConstants.textFieldDecoration(label, helperText),
+                decoration: MedicationFormConstants.textFieldDecoration(label, helperText).copyWith(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18), // Increase vertical padding
+                ),
                 keyboardType: keyboardType,
                 validator: validator,
               ),

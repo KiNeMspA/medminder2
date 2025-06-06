@@ -3,7 +3,7 @@ import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../common/medication_matrix.dart';
-import '../../../data/database.dart'; // Add this import
+import '../../../data/database.dart';
 import '../../../services/drift_service.dart';
 import '../constants/medication_form_constants.dart';
 import '../widgets/medication_form_card.dart';
@@ -13,7 +13,7 @@ class AddMedicationScreen extends ConsumerStatefulWidget {
   const AddMedicationScreen({super.key});
 
   @override
-  ConsumerState<AddMedicationScreen> createState() => _AddMedicationScreenState(); // Fix return type
+  ConsumerState<AddMedicationScreen> createState() => _AddMedicationScreenState();
 }
 
 class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
@@ -178,6 +178,7 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
                       label: MedicationFormConstants.nameLabel,
                       helperText: MedicationFormConstants.nameHelper,
                       validator: (value) => value!.isEmpty ? MedicationFormConstants.nameRequiredMessage : null,
+                      maxWidth: 350, // Increase width for name field
                     ),
                     const SizedBox(height: MedicationFormConstants.fieldSpacing),
                     MedicationFormField(
@@ -218,7 +219,7 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
                           ),
                         ],
                       ),
-                      maxWidth: 200,
+                      maxWidth: 350, // Increase width for concentration field
                     ),
                     const SizedBox(height: MedicationFormConstants.fieldSpacing),
                     MedicationFormField(
@@ -249,7 +250,7 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
                           ),
                         ],
                       ),
-                      maxWidth: 200,
+                      maxWidth: 350, // Increase width for quantity field
                     ),
                     const SizedBox(height: MedicationFormConstants.buttonSpacing),
                     ElevatedButton(
