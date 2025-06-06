@@ -887,6 +887,17 @@ class $SchedulesTable extends Schedules
     requiredDuringInsert: false,
     defaultValue: const Constant(''),
   );
+  static const VerificationMeta _notificationIdMeta = const VerificationMeta(
+    'notificationId',
+  );
+  @override
+  late final GeneratedColumn<String> notificationId = GeneratedColumn<String>(
+    'notification_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -895,6 +906,7 @@ class $SchedulesTable extends Schedules
     days,
     time,
     name,
+    notificationId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -939,6 +951,15 @@ class $SchedulesTable extends Schedules
         name.isAcceptableOrUnknown(data['name']!, _nameMeta),
       );
     }
+    if (data.containsKey('notification_id')) {
+      context.handle(
+        _notificationIdMeta,
+        notificationId.isAcceptableOrUnknown(
+          data['notification_id']!,
+          _notificationIdMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -974,6 +995,10 @@ class $SchedulesTable extends Schedules
         DriftSqlType.string,
         data['${effectivePrefix}name'],
       )!,
+      notificationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notification_id'],
+      ),
     );
   }
 
@@ -993,6 +1018,7 @@ class Schedule extends DataClass implements Insertable<Schedule> {
   final List<String> days;
   final DateTime time;
   final String name;
+  final String? notificationId;
   const Schedule({
     required this.id,
     this.doseId,
@@ -1000,6 +1026,7 @@ class Schedule extends DataClass implements Insertable<Schedule> {
     required this.days,
     required this.time,
     required this.name,
+    this.notificationId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1016,6 +1043,9 @@ class Schedule extends DataClass implements Insertable<Schedule> {
     }
     map['time'] = Variable<DateTime>(time);
     map['name'] = Variable<String>(name);
+    if (!nullToAbsent || notificationId != null) {
+      map['notification_id'] = Variable<String>(notificationId);
+    }
     return map;
   }
 
@@ -1029,6 +1059,9 @@ class Schedule extends DataClass implements Insertable<Schedule> {
       days: Value(days),
       time: Value(time),
       name: Value(name),
+      notificationId: notificationId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notificationId),
     );
   }
 
@@ -1044,6 +1077,7 @@ class Schedule extends DataClass implements Insertable<Schedule> {
       days: serializer.fromJson<List<String>>(json['days']),
       time: serializer.fromJson<DateTime>(json['time']),
       name: serializer.fromJson<String>(json['name']),
+      notificationId: serializer.fromJson<String?>(json['notificationId']),
     );
   }
   @override
@@ -1056,6 +1090,7 @@ class Schedule extends DataClass implements Insertable<Schedule> {
       'days': serializer.toJson<List<String>>(days),
       'time': serializer.toJson<DateTime>(time),
       'name': serializer.toJson<String>(name),
+      'notificationId': serializer.toJson<String?>(notificationId),
     };
   }
 
@@ -1066,6 +1101,7 @@ class Schedule extends DataClass implements Insertable<Schedule> {
     List<String>? days,
     DateTime? time,
     String? name,
+    Value<String?> notificationId = const Value.absent(),
   }) => Schedule(
     id: id ?? this.id,
     doseId: doseId.present ? doseId.value : this.doseId,
@@ -1073,6 +1109,9 @@ class Schedule extends DataClass implements Insertable<Schedule> {
     days: days ?? this.days,
     time: time ?? this.time,
     name: name ?? this.name,
+    notificationId: notificationId.present
+        ? notificationId.value
+        : this.notificationId,
   );
   Schedule copyWithCompanion(SchedulesCompanion data) {
     return Schedule(
@@ -1082,6 +1121,9 @@ class Schedule extends DataClass implements Insertable<Schedule> {
       days: data.days.present ? data.days.value : this.days,
       time: data.time.present ? data.time.value : this.time,
       name: data.name.present ? data.name.value : this.name,
+      notificationId: data.notificationId.present
+          ? data.notificationId.value
+          : this.notificationId,
     );
   }
 
@@ -1093,13 +1135,15 @@ class Schedule extends DataClass implements Insertable<Schedule> {
           ..write('frequency: $frequency, ')
           ..write('days: $days, ')
           ..write('time: $time, ')
-          ..write('name: $name')
+          ..write('name: $name, ')
+          ..write('notificationId: $notificationId')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, doseId, frequency, days, time, name);
+  int get hashCode =>
+      Object.hash(id, doseId, frequency, days, time, name, notificationId);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1109,7 +1153,8 @@ class Schedule extends DataClass implements Insertable<Schedule> {
           other.frequency == this.frequency &&
           other.days == this.days &&
           other.time == this.time &&
-          other.name == this.name);
+          other.name == this.name &&
+          other.notificationId == this.notificationId);
 }
 
 class SchedulesCompanion extends UpdateCompanion<Schedule> {
@@ -1119,6 +1164,7 @@ class SchedulesCompanion extends UpdateCompanion<Schedule> {
   final Value<List<String>> days;
   final Value<DateTime> time;
   final Value<String> name;
+  final Value<String?> notificationId;
   const SchedulesCompanion({
     this.id = const Value.absent(),
     this.doseId = const Value.absent(),
@@ -1126,6 +1172,7 @@ class SchedulesCompanion extends UpdateCompanion<Schedule> {
     this.days = const Value.absent(),
     this.time = const Value.absent(),
     this.name = const Value.absent(),
+    this.notificationId = const Value.absent(),
   });
   SchedulesCompanion.insert({
     this.id = const Value.absent(),
@@ -1134,6 +1181,7 @@ class SchedulesCompanion extends UpdateCompanion<Schedule> {
     required List<String> days,
     required DateTime time,
     this.name = const Value.absent(),
+    this.notificationId = const Value.absent(),
   }) : frequency = Value(frequency),
        days = Value(days),
        time = Value(time);
@@ -1144,6 +1192,7 @@ class SchedulesCompanion extends UpdateCompanion<Schedule> {
     Expression<String>? days,
     Expression<DateTime>? time,
     Expression<String>? name,
+    Expression<String>? notificationId,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1152,6 +1201,7 @@ class SchedulesCompanion extends UpdateCompanion<Schedule> {
       if (days != null) 'days': days,
       if (time != null) 'time': time,
       if (name != null) 'name': name,
+      if (notificationId != null) 'notification_id': notificationId,
     });
   }
 
@@ -1162,6 +1212,7 @@ class SchedulesCompanion extends UpdateCompanion<Schedule> {
     Value<List<String>>? days,
     Value<DateTime>? time,
     Value<String>? name,
+    Value<String?>? notificationId,
   }) {
     return SchedulesCompanion(
       id: id ?? this.id,
@@ -1170,6 +1221,7 @@ class SchedulesCompanion extends UpdateCompanion<Schedule> {
       days: days ?? this.days,
       time: time ?? this.time,
       name: name ?? this.name,
+      notificationId: notificationId ?? this.notificationId,
     );
   }
 
@@ -1196,6 +1248,9 @@ class SchedulesCompanion extends UpdateCompanion<Schedule> {
     if (name.present) {
       map['name'] = Variable<String>(name.value);
     }
+    if (notificationId.present) {
+      map['notification_id'] = Variable<String>(notificationId.value);
+    }
     return map;
   }
 
@@ -1207,7 +1262,8 @@ class SchedulesCompanion extends UpdateCompanion<Schedule> {
           ..write('frequency: $frequency, ')
           ..write('days: $days, ')
           ..write('time: $time, ')
-          ..write('name: $name')
+          ..write('name: $name, ')
+          ..write('notificationId: $notificationId')
           ..write(')'))
         .toString();
   }
@@ -2331,6 +2387,7 @@ typedef $$SchedulesTableCreateCompanionBuilder =
       required List<String> days,
       required DateTime time,
       Value<String> name,
+      Value<String?> notificationId,
     });
 typedef $$SchedulesTableUpdateCompanionBuilder =
     SchedulesCompanion Function({
@@ -2340,6 +2397,7 @@ typedef $$SchedulesTableUpdateCompanionBuilder =
       Value<List<String>> days,
       Value<DateTime> time,
       Value<String> name,
+      Value<String?> notificationId,
     });
 
 final class $$SchedulesTableReferences
@@ -2397,6 +2455,11 @@ class $$SchedulesTableFilterComposer
 
   ColumnFilters<String> get name => $composableBuilder(
     column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notificationId => $composableBuilder(
+    column: $table.notificationId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2458,6 +2521,11 @@ class $$SchedulesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get notificationId => $composableBuilder(
+    column: $table.notificationId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$DosesTableOrderingComposer get doseId {
     final $$DosesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -2505,6 +2573,11 @@ class $$SchedulesTableAnnotationComposer
 
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get notificationId => $composableBuilder(
+    column: $table.notificationId,
+    builder: (column) => column,
+  );
 
   $$DosesTableAnnotationComposer get doseId {
     final $$DosesTableAnnotationComposer composer = $composerBuilder(
@@ -2564,6 +2637,7 @@ class $$SchedulesTableTableManager
                 Value<List<String>> days = const Value.absent(),
                 Value<DateTime> time = const Value.absent(),
                 Value<String> name = const Value.absent(),
+                Value<String?> notificationId = const Value.absent(),
               }) => SchedulesCompanion(
                 id: id,
                 doseId: doseId,
@@ -2571,6 +2645,7 @@ class $$SchedulesTableTableManager
                 days: days,
                 time: time,
                 name: name,
+                notificationId: notificationId,
               ),
           createCompanionCallback:
               ({
@@ -2580,6 +2655,7 @@ class $$SchedulesTableTableManager
                 required List<String> days,
                 required DateTime time,
                 Value<String> name = const Value.absent(),
+                Value<String?> notificationId = const Value.absent(),
               }) => SchedulesCompanion.insert(
                 id: id,
                 doseId: doseId,
@@ -2587,6 +2663,7 @@ class $$SchedulesTableTableManager
                 days: days,
                 time: time,
                 name: name,
+                notificationId: notificationId,
               ),
           withReferenceMapper: (p0) => p0
               .map(

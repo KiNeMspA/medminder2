@@ -2,6 +2,8 @@ import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timezone/timezone.dart' as tz;
+import 'package:flutter/services.dart';
+import 'package:logging/logging.dart';
 import '../../../common/mixins/controller_mixin.dart';
 import '../../../data/database.dart';
 import '../../../services/drift_service.dart';
@@ -22,6 +24,7 @@ class ScheduleScreen extends ConsumerStatefulWidget {
 class _ScheduleScreenState extends ConsumerState<ScheduleScreen> with ControllerMixin {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController(text: ScheduleFormConstants.defaultName);
+  final Logger _logger = Logger('ScheduleScreen');
   String _frequency = ScheduleFormConstants.defaultFrequency;
   List<String> _days = [];
   TimeOfDay _selectedTime = TimeOfDay.now();
@@ -108,8 +111,15 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> with Controller
       );
       Navigator.pop(context);
     } catch (e) {
+      _logger.severe('Error saving schedule: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(ScheduleFormConstants.errorSavingMessage(e))),
+        SnackBar(
+          content: Text(
+            e is PlatformException && e.code == 'permissions_denied'
+                ? 'Please grant alarm and notification permissions'
+                : ScheduleFormConstants.errorSavingMessage(e),
+          ),
+        ),
       );
     }
   }

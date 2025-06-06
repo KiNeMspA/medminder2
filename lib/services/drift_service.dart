@@ -1,7 +1,7 @@
-// lib/services/drift_service.dart
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/database.dart';
+import 'notification_service.dart';
 import 'package:logging/logging.dart';
 
 final driftServiceProvider = Provider<DriftService>((ref) => DriftService.instance);
@@ -67,7 +67,9 @@ class DriftService {
 
   Future<int> addSchedule(SchedulesCompanion schedule) async {
     _logger.info('Adding schedule: $schedule');
-    return await _db.addSchedule(schedule);
+    final scheduleId = await _db.addSchedule(schedule);
+    await _db.updateSchedule(scheduleId, SchedulesCompanion(notificationId: Value('schedule_$scheduleId')));
+    return scheduleId;
   }
 
   Future<List<Schedule>> getSchedules(int medicationId) => _db.getSchedules(medicationId);
@@ -79,6 +81,10 @@ class DriftService {
 
   Future<void> deleteSchedule(int id) async {
     _logger.info('Deleting schedule: id=$id');
+    final schedule = await (_db.select(_db.schedules)..where((s) => s.id.equals(id))).getSingleOrNull();
+    if (schedule != null && schedule.notificationId != null) {
+      await NotificationService().cancelNotification(schedule.notificationId!);
+    }
     await _db.deleteSchedule(id);
   }
 

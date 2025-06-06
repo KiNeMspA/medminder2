@@ -1,4 +1,3 @@
-// lib/data/database.dart
 import 'dart:io';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
@@ -40,6 +39,7 @@ class Schedules extends Table {
   TextColumn get days => text().map(const StringListConverter())();
   DateTimeColumn get time => dateTime()();
   TextColumn get name => text().withDefault(const Constant(''))();
+  TextColumn get notificationId => text().nullable()(); // Corrected column
 }
 
 class DoseHistory extends Table {
@@ -55,27 +55,19 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8; // Incremented
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onUpgrade: (Migrator m, int from, int to) async {
       _logger.info('Upgrading database from schema version $from to $to');
-      if (from == 1) {
-        await m.addColumn(doses, doses.name);
-        _logger.info('Added name column to Doses table');
+      if (from <= 7) {
+        await m.addColumn(schedules, schedules.notificationId);
+        _logger.info('Added notificationId column to Schedules table');
       }
-      if (from <= 2) {
-        await m.createIndex(Index('medications', 'UNIQUE(name)'));
-        _logger.info('Added unique constraint to Medications name');
-      }
-      if (from <= 3) {
-        await m.createTable(doseHistory);
-        _logger.info('Created DoseHistory table');
-      }
-      if (from <= 4) {
-        await m.createTable(schedules);
-        _logger.info('Created Schedules table');
+      if (from <= 6) {
+        await m.deleteTable('ScheduleDoses');
+        _logger.info('Ensured ScheduleDoses table is dropped');
       }
       if (from <= 5) {
         await m.deleteTable('ScheduleDoses');
@@ -83,10 +75,21 @@ class AppDatabase extends _$AppDatabase {
         await m.alterTable(TableMigration(schedules));
         _logger.info('Dropped ScheduleDoses table, added name to Schedules, made doseId nullable');
       }
-      if (from <= 6) {
-        // Ensure any residual ScheduleDoses is dropped
-        await m.deleteTable('ScheduleDoses');
-        _logger.info('Ensured ScheduleDoses table is dropped');
+      if (from <= 4) {
+        await m.createTable(schedules);
+        _logger.info('Created Schedules table');
+      }
+      if (from <= 3) {
+        await m.createTable(doseHistory);
+        _logger.info('Created DoseHistory table');
+      }
+      if (from <= 2) {
+        await m.createIndex(Index('medications', 'UNIQUE(name)'));
+        _logger.info('Added unique constraint to Medications name');
+      }
+      if (from <= 1) {
+        await m.addColumn(doses, doses.name);
+        _logger.info('Added name column to Doses table');
       }
     },
   );
