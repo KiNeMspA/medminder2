@@ -65,12 +65,17 @@ class DriftService {
     await _db.deleteDose(id);
   }
 
-  Future<void> addSchedule(SchedulesCompanion schedule) async {
+  Future<int> addSchedule(SchedulesCompanion schedule) async {
     _logger.info('Adding schedule: $schedule');
-    await _db.addSchedule(schedule);
+    return await _db.addSchedule(schedule);
   }
 
-  Future<List<Schedule>> getSchedules(int doseId) => _db.getSchedules(doseId);
+  Future<List<Schedule>> getSchedules(int medicationId) => _db.getSchedules(medicationId);
+
+  Future<void> updateSchedule(int id, SchedulesCompanion schedule) async {
+    _logger.info('Updating schedule: id=$id, $schedule');
+    await _db.updateSchedule(id, schedule);
+  }
 
   Future<void> deleteSchedule(int id) async {
     _logger.info('Deleting schedule: id=$id');

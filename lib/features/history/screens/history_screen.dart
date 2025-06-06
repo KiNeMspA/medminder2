@@ -1,8 +1,9 @@
 // lib/screens/history_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../data/database.dart';
-import '../services/drift_service.dart';
+import 'package:intl/intl.dart';
+import '../../../data/database.dart';
+import '../../../services/drift_service.dart';
 
 class HistoryScreen extends ConsumerWidget {
   const HistoryScreen({super.key});
@@ -20,31 +21,33 @@ class HistoryScreen extends ConsumerWidget {
           itemCount: doses.length,
           itemBuilder: (context, index) {
             final dose = doses[index];
-            return FutureBuilder<List<Schedule>>(
-              future: ref.read(driftServiceProvider).getSchedules(dose.id),
-              builder: (context, scheduleSnapshot) {
-                final schedules = scheduleSnapshot.data ?? [];
-                final scheduleText = schedules.isEmpty
-                    ? 'No schedules'
-                    : schedules.map((s) => '${s.time} (${s.days.join(', ')})').join('; ');
-                return FutureBuilder<List<Medication>>(
-                  future: ref.read(driftServiceProvider).getMedications(),
-                  builder: (context, medSnapshot) {
-                    final medication = medSnapshot.data?.firstWhere(
-                          (m) => m.id == dose.medicationId,
-                      orElse: () => Medication(
-                        id: dose.medicationId,
-                        name: 'Unknown',
-                        concentration: 0,
-                        concentrationUnit: '',
-                        stockQuantity: 0,
-                        form: '',
-                      ),
-                    );
+            return FutureBuilder<List<Medication>>(
+              future: ref.read(driftServiceProvider).getMedications(),
+              builder: (context, medSnapshot) {
+                final medication = medSnapshot.data?.firstWhere(
+                      (m) => m.id == dose.medicationId,
+                  orElse: () => Medication(
+                    id: dose.medicationId,
+                    name: 'Unknown',
+                    concentration: 0,
+                    concentrationUnit: '',
+                    stockQuantity: 0,
+                    form: '',
+                  ),
+                );
+                return FutureBuilder<List<Schedule>>(
+                  future: ref.read(driftServiceProvider).getSchedules(dose.medicationId),
+                  builder: (context, scheduleSnapshot) {
+                    final schedules = scheduleSnapshot.data?.where((s) => s.doseId == dose.id).toList() ?? [];
+                    final scheduleText = schedules.isEmpty
+                        ? 'No schedules'
+                        : schedules
+                        .map((s) => '${s.name} - ${DateFormat.jm().format(s.time)} (${s.days.join(', ')})')
+                        .join('; ');
                     return ListTile(
                       title: Text(
-                          '${dose.amount} ${dose.unit} (${medication?.name ?? 'Unknown'})',
-                          style: Theme.of(context).textTheme.bodyLarge,
+                        '${dose.amount} ${dose.unit} (${medication?.name ?? 'Unknown'})',
+                        style: Theme.of(context).textTheme.bodyLarge,
                       ),
                       subtitle: Text(
                         'Medication ID: ${dose.medicationId}\nWeight: ${dose.weight != 0.0 ? dose.weight : "N/A"} kg\nSchedules: $scheduleText',

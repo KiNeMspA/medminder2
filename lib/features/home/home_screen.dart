@@ -1,13 +1,13 @@
 // lib/screens/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'dose_screen.dart';
-import 'history_screen.dart';
-import 'medication_info_screen.dart';
-import 'medication_screen.dart';
-import '../services/drift_service.dart';
-import '../widgets/medication_card.dart';
-import '../data/database.dart';
+import '../dose/screens/dose_screen.dart';
+import '../history/screens/history_screen.dart';
+import '../medication/screens/medication_info_screen.dart';
+import '../medication/screens/medication_screen.dart';
+import '../../services/drift_service.dart';
+import 'widgets/medication_card.dart';
+import '../../data/database.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});

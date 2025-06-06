@@ -1,5 +1,5 @@
 // lib/core/calculations.dart
-import 'medication_matrix.dart';
+import '../medication_matrix.dart';
 
 class MedCalculations {
   static double convertUnit(double value, String fromUnit, String toUnit, {double? dropSizeML}) {

@@ -27,7 +27,7 @@ class FormWidgets {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               backgroundColor: Colors.white,
               contentPadding: const EdgeInsets.all(24),
-              insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+              insetPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 24),
               content: ConstrainedBox(
                 constraints: BoxConstraints(
                   minWidth: 280,
@@ -39,46 +39,73 @@ class FormWidgets {
                   children: [
                     Text(
                       title,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      style: TextStyle(
+                        fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
+                        color: Theme.of(context).primaryColor,
                       ),
                     ),
                     const SizedBox(height: 16),
-                    if (dropdownItems != null && dropdownItems.isNotEmpty) ...[
-                      SizedBox(
-                        width: double.infinity,
-                        child: DropdownButtonFormField<String>(
-                          decoration: InputDecoration(
-                            labelText: label,
-                            helperText: helperText,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
+                    if (dropdownItems != null && dropdownItems.isNotEmpty)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: controller,
+                              decoration: InputDecoration(
+                                labelText: label,
+                                helperText: helperText,
+                                errorText: errorText,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                filled: true,
+                                fillColor: Colors.grey[100],
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              ),
+                              keyboardType: keyboardType ?? TextInputType.text,
+                              textCapitalization: TextCapitalization.words,
+                              autofocus: true,
+                              onChanged: (value) {
+                                setState(() {
+                                  errorText = validator?.call(value);
+                                });
+                              },
                             ),
-                            filled: true,
-                            fillColor: Colors.grey[100],
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           ),
-                          value: dropdownCurrentValue,
-                          items: dropdownItems
-                              .map((item) => DropdownMenuItem(value: item, child: Text(item)))
-                              .toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              dropdownCurrentValue = value;
-                              onDropdownChanged?.call(value);
-                            });
-                          },
-                          validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-                        ),
-                      ),
-                    ] else ...[
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              decoration: InputDecoration(
+                                labelText: 'Unit',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                filled: true,
+                                fillColor: Colors.grey[100],
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              ),
+                              value: dropdownCurrentValue,
+                              items: dropdownItems
+                                  .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+                                  .toList(),
+                              onChanged: (value) {
+                                setState(() {
+                                  dropdownCurrentValue = value;
+                                  onDropdownChanged?.call(value);
+                                });
+                              },
+                              validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                            ),
+                          ),
+                        ],
+                      )
+                    else
                       TextFormField(
                         controller: controller,
                         decoration: InputDecoration(
                           labelText: label,
                           helperText: helperText,
-                          helperMaxLines: 1,
                           errorText: errorText,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -87,17 +114,15 @@ class FormWidgets {
                           fillColor: Colors.grey[100],
                           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         ),
-                        keyboardType: keyboardType,
+                        keyboardType: keyboardType ?? TextInputType.text,
                         textCapitalization: TextCapitalization.words,
                         autofocus: true,
-                        style: Theme.of(context).textTheme.bodyLarge,
                         onChanged: (value) {
                           setState(() {
                             errorText = validator?.call(value);
                           });
                         },
                       ),
-                    ],
                     const SizedBox(height: 24),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
@@ -106,17 +131,17 @@ class FormWidgets {
                           onPressed: () => Navigator.pop(context),
                           child: Text(
                             'Cancel',
-                            style: TextStyle(color: Theme.of(context).colorScheme.primary),
+                            style: TextStyle(color: Theme.of(context).primaryColor),
                           ),
                         ),
                         ElevatedButton(
                           onPressed: () {
                             if (dropdownItems != null) {
-                              if (dropdownCurrentValue != null) {
-                                Navigator.pop(context, dropdownCurrentValue);
+                              if (controller.text.isNotEmpty && dropdownCurrentValue != null) {
+                                Navigator.pop(context, controller.text);
                               } else {
                                 setState(() {
-                                  errorText = 'Please select an option';
+                                  errorText = controller.text.isEmpty ? '$label is required' : 'Please select a unit';
                                 });
                               }
                             } else {
@@ -130,7 +155,7 @@ class FormWidgets {
                             }
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Theme.of(context).colorScheme.primary,
+                            backgroundColor: Theme.of(context).primaryColor,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),

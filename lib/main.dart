@@ -5,8 +5,8 @@ import 'package:get_storage/get_storage.dart';
 import 'package:logging/logging.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
-import 'core/theme.dart';
-import 'screens/home_screen.dart';
+import 'common/theme/app_theme.dart';
+import 'features/home/home_screen.dart';
 import 'services/drift_service.dart';
 import 'services/notification_service.dart';
 

@@ -1,5 +1,5 @@
-// lib/core/constants.dart
-import 'medication_matrix.dart';
+// lib/core/app_strings.dart
+import '../medication_matrix.dart';
 
 class Units {
   static const List<String> forms = [
