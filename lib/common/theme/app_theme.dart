@@ -1,4 +1,4 @@
-// lib/core/app_theme.dart
+// lib/common/theme/app_theme.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -24,6 +24,7 @@ final appTheme = ThemeData(
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     color: Colors.white.withOpacity(0.9),
     shadowColor: Colors.black26,
+    margin: EdgeInsets.zero, // Explicitly remove margins
   ),
   textTheme: TextTheme(
     displayLarge: GoogleFonts.poppins(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.black87),

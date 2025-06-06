@@ -3,6 +3,7 @@ import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../common/medication_matrix.dart';
+import '../../../common/utils/formatters.dart';
 import '../../../data/database.dart';
 import '../../../services/drift_service.dart';
 import '../constants/medication_form_constants.dart';
@@ -56,7 +57,10 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
     final quantity = double.tryParse(_quantityController.text) ?? 0;
     final total = concentration * quantity;
     setState(() {
-      _summary = '$quantity x ${concentration > 0 ? concentration : ''}$_unit $name $_selectedForm${total > 0 ? ' (${total}$_unit total)' : ''}';
+      _summary = '${Utils.removeTrailingZeros(quantity)} x '
+          '${concentration > 0 ? Utils.removeTrailingZeros(concentration) : ''}$_unit '
+          '$name $_selectedForm'
+          '${total > 0 ? ' (${Utils.removeTrailingZeros(total)}$_unit total)' : ''}';
     });
   }
 
@@ -67,13 +71,13 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
 
   void _incrementField(TextEditingController controller) {
     final currentValue = double.tryParse(controller.text) ?? 0;
-    controller.text = (currentValue + 1).toString();
+    controller.text = Utils.removeTrailingZeros(currentValue + 1);
   }
 
   void _decrementField(TextEditingController controller) {
     final currentValue = double.tryParse(controller.text) ?? 0;
     if (currentValue > 0) {
-      controller.text = (currentValue - 1).toString();
+      controller.text = Utils.removeTrailingZeros(currentValue - 1);
     }
   }
 
@@ -121,6 +125,7 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
     return Scaffold(
       appBar: AppBar(
         title: const Text(MedicationFormConstants.addMedicationTitle),
@@ -130,20 +135,20 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          child: Padding(
-            padding: MedicationFormConstants.formPadding,
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  MedicationFormCard(
+          child: Form( // Removed Padding widget
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: MedicationFormCard(
                     child: DropdownButtonFormField<String>(
                       decoration: MedicationFormConstants.dropdownDecoration.copyWith(
                         labelText: null,
                         hint: const Text('Select Medication Type'),
-                        helperText: 'Choose Medication Type', // Updated helper text
-                        helperMaxLines: 2, // Allow wrapping
+                        helperText: 'Choose Medication Type',
+                        helperMaxLines: 2,
                       ),
                       value: _selectedForm,
                       items: MedicationFormConstants.medicationTypes
@@ -152,7 +157,7 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
                       onChanged: (value) {
                         setState(() {
                           _selectedForm = value;
-                          _selectedType = MedicationType.valuesOfFirstWhere(
+                          _selectedType = MedicationType.values.firstWhere(
                                 (type) => type.toString().split('.').last == value!.toLowerCase().replaceAll(' ', ''),
                             orElse: () => MedicationType.tablet,
                           );
@@ -167,102 +172,128 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
                       validator: (value) => value == null ? MedicationFormConstants.typeRequiredMessage : null,
                     ),
                   ),
-                  if (_selectedForm != null) ...[
-                    const SizedBox(height: MedicationFormConstants.sectionSpacing),
-                    if (_summary.isNotEmpty)
-                      Text(
+                ),
+                if (_selectedForm != null) ...[
+                  const SizedBox(height: MedicationFormConstants.sectionSpacing),
+                  if (_summary.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0), // Minimal padding for summary
+                      child: Text(
                         _summary,
                         style: MedicationFormConstants.summaryStyle(context),
                       ),
-                    const SizedBox(height: MedicationFormConstants.sectionSpacing),
-                    MedicationFormField(
-                      controller: _nameController,
-                      label: MedicationFormConstants.nameLabel,
-                      helperText: MedicationFormConstants.nameHelper,
-                      validator: (value) => value!.isEmpty ? MedicationFormConstants.nameRequiredMessage : null,
-                      maxWidth: 350,
                     ),
-                    const SizedBox(height: MedicationFormConstants.fieldSpacing),
-                    MedicationFormField(
-                      controller: _concentrationController,
-                      label: MedicationFormConstants.concentrationLabel,
-                      helperText: MedicationFormConstants.concentrationHelper,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      validator: (value) => value != null && value.isEmpty
-                          ? MedicationFormConstants.concentrationRequiredMessage
-                          : value != null && double.tryParse(value) == null
-                          ? MedicationFormConstants.invalidNumberMessage
-                          : null,
-                      suffix: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            child: DropdownButton<String>(
-                              value: _unit,
-                              items: MedicationMatrix.getConcentrationUnits(_selectedType!).toList()
-                                  .map((unit) => DropdownMenuItem(value: unit, child: Text(unit)))
-                                  .toList(),
-                              onChanged: (value) {
-                                setState(() {
-                                  _unit = value!;
-                                  _updateSummary();
-                                });
-                              },
+                  const SizedBox(height: MedicationFormConstants.sectionSpacing),
+                  SizedBox(
+                    width: double.infinity,
+                    child: MedicationFormCard(
+                      child: MedicationFormField(
+                        controller: _nameController,
+                        label: MedicationFormConstants.nameLabel,
+                        helperText: 'Enter the name of the Medication',
+                        helperMaxLines: 2,
+                        validator: (value) => value!.isEmpty ? MedicationFormConstants.nameRequiredMessage : null,
+                        maxWidth: screenWidth * 0.65, // 65% field width
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: MedicationFormConstants.fieldSpacing),
+                  SizedBox(
+                    width: double.infinity,
+                    child: MedicationFormCard(
+                      child: MedicationFormField(
+                        controller: _concentrationController,
+                        label: MedicationFormConstants.concentrationLabel,
+                        helperText: 'Enter the Concentration',
+                        helperMaxLines: 2,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        validator: (value) => value != null && value.isEmpty
+                            ? MedicationFormConstants.concentrationRequiredMessage
+                            : value != null && double.tryParse(value) == null
+                            ? MedicationFormConstants.invalidNumberMessage
+                            : null,
+                        suffix: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              child: DropdownButton<String>(
+                                value: _unit,
+                                items: MedicationMatrix.getConcentrationUnits(_selectedType!)
+                                    .map((unit) => DropdownMenuItem(value: unit, child: Text(unit)))
+                                    .toList(),
+                                onChanged: (value) {
+                                  setState(() {
+                                    _unit = value!;
+                                    _updateSummary();
+                                  });
+                                },
+                              ),
                             ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.remove, size: 20),
-                            onPressed: () => _decrementField(_concentrationController),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.add, size: 20),
-                            onPressed: () => _incrementField(_concentrationController),
-                          ),
-                        ],
+                            IconButton(
+                              icon: const Icon(Icons.remove, size: 20),
+                              onPressed: () => _decrementField(_concentrationController),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.add, size: 20),
+                              onPressed: () => _incrementField(_concentrationController),
+                            ),
+                          ],
+                        ),
+                        maxWidth: screenWidth * 0.65, // 65% field width
                       ),
-                      maxWidth: 350,
                     ),
-                    const SizedBox(height: MedicationFormConstants.fieldSpacing),
-                    MedicationFormField(
-                      controller: _quantityController,
-                      label: MedicationFormConstants.quantityLabel,
-                      helperText: MedicationFormConstants.quantityHelper,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      validator: (value) => value != null && value.isEmpty
-                          ? MedicationFormConstants.quantityRequiredMessage
-                          : value != null && double.tryParse(value) == null
-                          ? MedicationFormConstants.invalidNumberMessage
-                          : null,
-                      suffix: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            child: Text(MedicationFormConstants.units trenger,
-                                style: Theme.of(context).textTheme.bodyMedium),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.remove, size: 20),
-                            onPressed: () => _decrementField(_quantityController),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.add, size: 20),
-                            onPressed: () => _incrementField(_quantityController),
-                          ),
-                        ],
+                  ),
+                  const SizedBox(height: MedicationFormConstants.fieldSpacing),
+                  SizedBox(
+                    width: double.infinity,
+                    child: MedicationFormCard(
+                      child: MedicationFormField(
+                        controller: _quantityController,
+                        label: MedicationFormConstants.quantityLabel,
+                        helperText: 'Enter the Amount of $_selectedForm',
+                        helperMaxLines: 2,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        validator: (value) => value != null && value.isEmpty
+                            ? MedicationFormConstants.quantityRequiredMessage
+                            : value != null && double.tryParse(value) == null
+                            ? MedicationFormConstants.invalidNumberMessage
+                            : null,
+                        suffix: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              child: Text(
+                                MedicationFormConstants.unitsLabel,
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.remove, size: 20),
+                              onPressed: () => _decrementField(_quantityController),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.add, size: 20),
+                              onPressed: () => _incrementField(_quantityController),
+                            ),
+                          ],
+                        ),
+                        maxWidth: screenWidth * 0.65, // 65% field width
                       ),
-                      maxWidth: 350,
                     ),
-                    const SizedBox(height: MedicationFormConstants.buttonSpacing),
-                    ElevatedButton(
+                  ),
+                  const SizedBox(height: MedicationFormConstants.buttonSpacing),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
                       onPressed: _saveMedication,
                       style: MedicationFormConstants.buttonStyle,
                       child: const Text(MedicationFormConstants.saveButton),
                     ),
-                  ],
+                  ),
                 ],
-              ),
+              ],
             ),
           ),
         ),

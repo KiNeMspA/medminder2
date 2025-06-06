@@ -1,7 +1,8 @@
-// lib/screens/history_screen.dart
+// lib/features/history/screens/history_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../../common/utils/formatters.dart'; // Add import
 import '../../../data/database.dart';
 import '../../../services/drift_service.dart';
 
@@ -28,7 +29,7 @@ class HistoryScreen extends ConsumerWidget {
                       (m) => m.id == dose.medicationId,
                   orElse: () => Medication(
                     id: dose.medicationId,
-                    name: 'Unknown',
+                    name: 'Medication',
                     concentration: 0,
                     concentrationUnit: '',
                     stockQuantity: 0,
@@ -46,11 +47,13 @@ class HistoryScreen extends ConsumerWidget {
                         .join('; ');
                     return ListTile(
                       title: Text(
-                        '${dose.amount} ${dose.unit} (${medication?.name ?? 'Unknown'})',
+                        '${Utils.removeTrailingZeros(dose.amount)} ${dose.unit} (${medication?.name ?? ''})',
                         style: Theme.of(context).textTheme.bodyLarge,
                       ),
                       subtitle: Text(
-                        'Medication ID: ${dose.medicationId}\nWeight: ${dose.weight != 0.0 ? dose.weight : "N/A"} kg\nSchedules: $scheduleText',
+                        'Medication ID: ${dose.medicationId}\n'
+                            'Weight: ${dose.weight != 0.0 ? Utils.removeTrailingZeros(dose.weight) : 'N/A'} kg\n'
+                            'Schedules: $scheduleText',
                         style: Theme.of(context).textTheme.bodyLarge,
                       ),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

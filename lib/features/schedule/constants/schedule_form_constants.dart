@@ -1,5 +1,7 @@
+// lib/features/schedule/constants/schedule_form_constants.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../../common/utils/formatters.dart'; // Add import
 import '../../../data/database.dart';
 
 class ScheduleFormConstants {
@@ -27,9 +29,10 @@ class ScheduleFormConstants {
   static String timeLabel(TimeOfDay time) => 'Time: ${DateFormat.jm().format(DateTime(2023, 1, 1, time.hour, time.minute))}';
   static String notificationTitle(String medicationName) => 'Medication Reminder: $medicationName';
   static String notificationBodyWithDose(double amount, String unit, String name) =>
-      'Time to take $amount $unit ($name)';
+      'Time to take ${Utils.removeTrailingZeros(amount)} $unit ($name)';
   static String notificationBodyWithoutDose(String name) => 'Schedule: $name';
-  static String doseDisplay(Dose dose) => '${dose.amount} ${dose.unit == 'Tablet' ? 'Tablet${dose.amount == 1 ? '' : 's'}' : dose.unit} (${dose.name ?? 'Unnamed'})';
+  static String doseDisplay(Dose dose) =>
+      '${Utils.removeTrailingZeros(dose.amount)} ${dose.unit == 'Tablet' ? 'Tablet${dose.amount == 1 ? '' : 's'}' : dose.unit} (${dose.name ?? 'Unnamed'})';
   static String errorSavingMessage(Object error) => 'Error saving schedule: $error';
 
   // Paddings and Spacings

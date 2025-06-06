@@ -1,9 +1,10 @@
-// lib/screens/medication_info_screen.dart
+// lib/features/medication/screens/medication_info_screen.dart
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../common/utils/calculations.dart';
+import '../../../common/utils/formatters.dart'; // Add import
 import '../../../data/database.dart';
 import '../../../services/drift_service.dart';
 import '../../dose/screens/dose_screen.dart';
@@ -94,12 +95,12 @@ class MedicationInfoScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Concentration: ${medication.concentration} ${medication.concentrationUnit}',
+                  'Concentration: ${Utils.removeTrailingZeros(medication.concentration)} ${medication.concentrationUnit}',
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Quantity: ${medication.stockQuantity}',
+                  'Quantity: ${Utils.removeTrailingZeros(medication.stockQuantity)}',
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
                 const SizedBox(height: 8),

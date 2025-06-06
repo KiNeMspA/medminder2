@@ -1,7 +1,8 @@
-// lib/widgets/medication_card.dart
+// lib/features/home/widgets/medication_card.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../../common/utils/formatters.dart'; // Add import
 import '../../../data/database.dart';
 import '../../../services/drift_service.dart';
 
@@ -19,7 +20,8 @@ class MedicationCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final stockText = '${medication.stockQuantity.toInt()} x ${medication.concentration}${medication.concentrationUnit} ${medication.form}';
+    final stockText =
+        '${Utils.removeTrailingZeros(medication.stockQuantity)} x ${Utils.removeTrailingZeros(medication.concentration)}${medication.concentrationUnit} ${medication.form}';
 
     return Card(
       elevation: 4,

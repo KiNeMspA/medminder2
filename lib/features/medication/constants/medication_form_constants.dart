@@ -11,9 +11,9 @@ class MedicationFormConstants {
   static const String concentrationLabel = 'Concentration';
   static const String quantityLabel = 'Quantity';
   static const String unitsLabel = 'units';
-  static const String nameHelper = 'e.g., Ibuprofen';
-  static const String concentrationHelper = 'e.g., 100 mg';
-  static const String quantityHelper = 'Stock amount';
+  static const String nameHelper = 'Enter the name of the Medication';
+  static const String concentrationHelper = 'Enter the Concentration';
+  static const String quantityHelper = 'Enter the Amount';
   static const String nameRequiredMessage = 'Medication Name is required';
   static const String concentrationRequiredMessage = 'Concentration is required';
   static const String quantityRequiredMessage = 'Quantity is required';
@@ -34,8 +34,8 @@ class MedicationFormConstants {
   static String errorSavingMessage(Object error) => 'Error: $error';
 
   // Paddings and Spacings
-  static const EdgeInsets formPadding = EdgeInsets.all(16.0);
-  static const EdgeInsets cardPadding = EdgeInsets.symmetric(horizontal: 16, vertical: 8);
+  static const EdgeInsets formPadding = EdgeInsets.zero; // No padding
+  static const EdgeInsets cardPadding = EdgeInsets.all(8.0);
   static const double sectionSpacing = 16.0;
   static const double fieldSpacing = 16.0;
   static const double buttonSpacing = 32.0;
@@ -57,8 +57,6 @@ class MedicationFormConstants {
   // Decorations
   static InputDecoration textFieldDecoration(String label, String? helperText) => InputDecoration(
     labelText: label,
-    helperText: helperText,
-    helperMaxLines: 2, // Allow wrapping for helper text
     border: const OutlineInputBorder(
       borderRadius: BorderRadius.all(Radius.circular(12)),
     ),
@@ -70,7 +68,7 @@ class MedicationFormConstants {
   static InputDecoration get dropdownDecoration => InputDecoration(
     labelText: 'Medication Type',
     helperText: 'Choose Medication Type',
-    helperMaxLines: 2, // Allow wrapping for helper text
+    helperMaxLines: 2,
     border: const OutlineInputBorder(
       borderRadius: BorderRadius.all(Radius.circular(12)),
     ),

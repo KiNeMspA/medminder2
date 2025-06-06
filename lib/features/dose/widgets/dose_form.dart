@@ -1,8 +1,10 @@
+// lib/features/dose/widgets/dose_form.dart
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 import '../../../common/utils/calculations.dart';
+import '../../../common/utils/formatters.dart'; // Add import
 import '../../../common/medication_matrix.dart';
 import '../../../data/database.dart';
 import '../../../services/drift_service.dart';
@@ -115,11 +117,11 @@ class _DoseFormState extends ConsumerState<DoseForm> {
     _nameController.text = dose.name ?? widget.medication.name;
     _nameEdited = dose.name != null && dose.name != widget.medication.name;
     if (_medicationType == MedicationType.tablet) {
-      _tabletCountController.text = MedCalculations.formatNumber(dose.amount);
-      _concentrationController.text = MedCalculations.formatNumber(dose.amount * widget.medication.concentration);
+      _tabletCountController.text = Utils.removeTrailingZeros(dose.amount);
+      _concentrationController.text = Utils.removeTrailingZeros(dose.amount * widget.medication.concentration);
       _unitController.text = DoseFormConstants.defaultTabletUnit;
     } else {
-      _concentrationController.text = MedCalculations.formatNumber(dose.amount);
+      _concentrationController.text = Utils.removeTrailingZeros(dose.amount);
       _unitController.text = dose.unit;
     }
     _updateSummary();
@@ -135,7 +137,7 @@ class _DoseFormState extends ConsumerState<DoseForm> {
     final tabletCount = double.tryParse(_tabletCountController.text) ?? 0;
     if (_medicationType == MedicationType.tablet) {
       final concentration = tabletCount * widget.medication.concentration;
-      _concentrationController.text = MedCalculations.formatNumber(concentration);
+      _concentrationController.text = Utils.removeTrailingZeros(concentration);
     }
     _updateSummary();
   }
@@ -145,7 +147,7 @@ class _DoseFormState extends ConsumerState<DoseForm> {
     final concentration = double.tryParse(_concentrationController.text) ?? 0;
     if (_medicationType == MedicationType.tablet) {
       final tabletCount = concentration / widget.medication.concentration;
-      _tabletCountController.text = MedCalculations.formatNumber(tabletCount);
+      _tabletCountController.text = Utils.removeTrailingZeros(tabletCount);
     }
     _updateSummary();
   }
@@ -159,11 +161,11 @@ class _DoseFormState extends ConsumerState<DoseForm> {
     String calculatedDose = '';
     if (amount > 0 && _medicationType == MedicationType.tablet) {
       final concentration = amount * widget.medication.concentration;
-      calculatedDose = ' (${concentration.toStringAsFixed(2)} ${_unitController.text})';
+      calculatedDose = ' (${Utils.removeTrailingZeros(concentration)} ${_unitController.text})';
     }
     setState(() {
       _summary = amount > 0
-          ? '$name - $amount ${unit == DoseFormConstants.tabletUnit ? 'Tablet${amount == 1 ? '' : 's'}' : unit}$calculatedDose'
+          ? '$name - ${Utils.removeTrailingZeros(amount)} ${unit == DoseFormConstants.tabletUnit ? 'Tablet${amount == 1 ? '' : 's'}' : unit}$calculatedDose'
           : DoseFormConstants.noDoseSpecified;
     });
   }

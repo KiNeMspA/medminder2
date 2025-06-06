@@ -1,5 +1,7 @@
+// lib/features/dose/widgets/dose_list_item.dart
 import 'package:flutter/material.dart';
 import '../../../common/utils/calculations.dart';
+import '../../../common/utils/formatters.dart'; // Add import
 import '../../../data/database.dart';
 import '../constants/dose_form_constants.dart';
 
@@ -36,8 +38,8 @@ class DoseListItem extends StatelessWidget {
               ),
               TextSpan(
                 text:
-                ' - ${dose.amount} ${dose.unit == DoseFormConstants.tabletUnit ? 'Tablet${dose.amount == 1 ? '' : 's'}' : dose.unit} '
-                    '${dose.unit == DoseFormConstants.tabletUnit ? '(${MedCalculations.formatNumber(dose.amount * medication.concentration)} ${medication.concentrationUnit})' : ''}',
+                ' - ${Utils.removeTrailingZeros(dose.amount)} ${dose.unit == DoseFormConstants.tabletUnit ? 'Tablet${dose.amount == 1 ? '' : 's'}' : dose.unit} '
+                    '${dose.unit == DoseFormConstants.tabletUnit ? '(${Utils.removeTrailingZeros(dose.amount * medication.concentration)} ${medication.concentrationUnit})' : ''}',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Colors.black54,
                   fontSize: 12,
