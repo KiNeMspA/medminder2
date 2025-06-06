@@ -10,9 +10,9 @@ class MedicationFormConstants {
   static const String concentrationLabel = 'Concentration';
   static const String quantityLabel = 'Quantity';
   static const String unitsLabel = 'units';
-  static const String nameHelper = 'Enter the full name of the medication (e.g., Ibuprofen)';
-  static const String concentrationHelper = 'Enter the active compound amount (e.g., 100)';
-  static const String quantityHelper = 'Enter the number of tablets in stock';
+  static const String nameHelper = 'e.g., Ibuprofen';
+  static const String concentrationHelper = 'e.g., 100 mg';
+  static const String quantityHelper = 'Stock amount';
   static const String nameRequiredMessage = 'Medication Name is required';
   static const String concentrationRequiredMessage = 'Concentration is required';
   static const String quantityRequiredMessage = 'Quantity is required';
@@ -23,12 +23,11 @@ class MedicationFormConstants {
   static const String duplicateNameMessage = 'A medication with this name already exists';
   static const String medicationSavedMessage = 'Medication saved';
   static const String warningTitle = 'Warning';
-  static const String warningContent =
-      'Editing this medication may impact existing doses or schedules. Do you want to proceed?';
+  static const String warningContent = 'Editing this medication may impact existing doses or schedules. Do you want to proceed?';
   static const String cancelButton = 'Cancel';
   static const String proceedButton = 'Proceed';
   static const String continueButton = 'Continue';
-  static const String saveButton = 'Save Medication';
+  static const String saveButton = 'Save Medication'; // Added
   static const List<String> medicationTypes = ['Tablet', 'Injection'];
 
   static String errorSavingMessage(Object error) => 'Error: $error';
@@ -42,8 +41,9 @@ class MedicationFormConstants {
 
   // Card Styling
   static const double cardElevation = 2.0;
-  static const RoundedRectangleBorder cardShape =
-  RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12)));
+  static const RoundedRectangleBorder cardShape = RoundedRectangleBorder(
+    borderRadius: BorderRadius.all(Radius.circular(12)),
+  );
 
   // Styles
   static const TextStyle titleStyle = TextStyle(fontSize: 20, fontWeight: FontWeight.bold);
@@ -57,16 +57,20 @@ class MedicationFormConstants {
   static InputDecoration textFieldDecoration(String label, String? helperText) => InputDecoration(
     labelText: label,
     helperText: helperText,
-    border: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+    border: const OutlineInputBorder(
+      borderRadius: BorderRadius.all(Radius.circular(12)),
+    ),
     filled: true,
     fillColor: Colors.grey[100],
     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
   );
 
-  static InputDecoration dropdownDecoration = InputDecoration(
+  static InputDecoration get dropdownDecoration => InputDecoration(
     labelText: 'Medication Type',
     helperText: 'Choose whether the medication is a tablet or injection',
-    border: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+    border: const OutlineInputBorder(
+      borderRadius: BorderRadius.all(Radius.circular(12)),
+    ),
     filled: true,
     fillColor: Colors.grey[100],
     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -75,6 +79,8 @@ class MedicationFormConstants {
   // Button Style
   static final ButtonStyle buttonStyle = ElevatedButton.styleFrom(
     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
-  );
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.all(Radius.circular(12)),
+    ),
+  ); // Added
 }

@@ -9,6 +9,7 @@ class MedicationFormField extends StatelessWidget {
   final TextInputType? keyboardType;
   final String? Function(String?)? validator;
   final Widget? suffix;
+  final double? maxWidth;
 
   const MedicationFormField({
     super.key,
@@ -18,23 +19,27 @@ class MedicationFormField extends StatelessWidget {
     this.keyboardType,
     this.validator,
     this.suffix,
+    this.maxWidth,
   });
 
   @override
   Widget build(BuildContext context) {
     return MedicationFormCard(
-      child: Row(
-        children: [
-          Expanded(
-            child: TextFormField(
-              controller: controller,
-              decoration: MedicationFormConstants.textFieldDecoration(label, helperText),
-              keyboardType: keyboardType,
-              validator: validator,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth ?? double.infinity),
+        child: Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: controller,
+                decoration: MedicationFormConstants.textFieldDecoration(label, helperText),
+                keyboardType: keyboardType,
+                validator: validator,
+              ),
             ),
-          ),
-          if (suffix != null) suffix!,
-        ],
+            if (suffix != null) suffix!,
+          ],
+        ),
       ),
     );
   }

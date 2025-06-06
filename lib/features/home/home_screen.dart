@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../dose/screens/dose_screen.dart';
 import '../history/screens/history_screen.dart';
+import '../medication/screens/add_medication_screen.dart';
 import '../medication/screens/medication_info_screen.dart';
 import '../medication/screens/medication_screen.dart';
 import '../../services/drift_service.dart';
@@ -80,7 +81,7 @@ class HomeScreen extends ConsumerWidget {
       floatingActionButton: FloatingActionButton(
         onPressed: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const MedicationScreen()),
+          MaterialPageRoute(builder: (_) => const AddMedicationScreen()),
         ).then((_) => ref.invalidate(medicationsProvider)),
         child: const Icon(Icons.add),
       ),

@@ -1,3 +1,4 @@
+// lib/features/schedule/screens/schedule_screen.dart
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -82,6 +83,19 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> with Controller
       return;
     }
 
+    final now = tz.TZDateTime.now(tz.local);
+    var scheduleTime = tz.TZDateTime(
+      tz.local,
+      now.year,
+      now.month,
+      now.day,
+      _selectedTime.hour,
+      _selectedTime.minute,
+    );
+    if (scheduleTime.isBefore(now)) {
+      scheduleTime = scheduleTime.add(const Duration(days: 1)); // Ensure future time
+    }
+
     final schedule = SchedulesCompanion(
       frequency: drift.Value(_frequency),
       days: drift.Value(_frequency == ScheduleFormConstants.dailyFrequency ? ScheduleFormConstants.daysOfWeek : _days),
@@ -93,19 +107,16 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> with Controller
     try {
       final scheduleId = await ref.read(driftServiceProvider).addSchedule(schedule);
       final notificationService = NotificationService();
-      final tzTime = tz.TZDateTime.from(
-        DateTime.now().copyWith(hour: _selectedTime.hour, minute: _selectedTime.minute, second: 0, millisecond: 0, microsecond: 0),
-        tz.local,
-      );
       await notificationService.scheduleNotification(
         'schedule_$scheduleId',
         ScheduleFormConstants.notificationTitle(widget.medication.name),
         _selectedDose != null
             ? ScheduleFormConstants.notificationBodyWithDose(_selectedDose!.amount, _selectedDose!.unit, _nameController.text)
             : ScheduleFormConstants.notificationBodyWithoutDose(_nameController.text),
-        tzTime,
+        scheduleTime,
         days: _frequency == ScheduleFormConstants.dailyFrequency ? ScheduleFormConstants.daysOfWeek : _days,
       );
+      await notificationService.logPendingNotifications(); // Log pending notifications
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text(ScheduleFormConstants.scheduleSavedMessage)),
       );

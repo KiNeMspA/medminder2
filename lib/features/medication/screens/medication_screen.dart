@@ -10,7 +10,8 @@ import '../widgets/medication_form_field.dart';
 
 class MedicationScreen extends ConsumerStatefulWidget {
   final Medication? medication;
-  const MedicationScreen({super.key, this.medication});
+  final String? initialForm;
+  const MedicationScreen({super.key, this.medication, this.initialForm});
 
   @override
   ConsumerState<MedicationScreen> createState() => _MedicationScreenState();
@@ -31,6 +32,14 @@ class _MedicationScreenState extends ConsumerState<MedicationScreen> {
     super.initState();
     if (widget.medication != null) {
       _initializeFields(widget.medication!);
+    } else if (widget.initialForm != null) {
+      _selectedForm = widget.initialForm;
+      _selectedType = MedicationType.values.firstWhere(
+            (type) => type.toString().split('.').last == widget.initialForm!.toLowerCase().replaceAll(' ', ''),
+        orElse: () => MedicationType.tablet,
+      );
+      _unitController.text = MedicationFormConstants.defaultUnit;
+      _updateSummary();
     }
     _setupListeners();
   }
@@ -181,8 +190,45 @@ class _MedicationScreenState extends ConsumerState<MedicationScreen> {
         const SnackBar(content: Text(MedicationFormConstants.medicationSavedMessage)),
       );
     }).catchError((e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(MedicationFormConstants.errorSavingMessage(e))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(MedicationFormConstants.errorSavingMessage(e))),
+      );
     });
+  }
+
+  void _showTypeChangeDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Change Medication Type'),
+        content: DropdownButtonFormField<String>(
+          decoration: MedicationFormConstants.dropdownDecoration,
+          value: _selectedForm,
+          items: MedicationFormConstants.medicationTypes
+              .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+              .toList(),
+          onChanged: (value) {
+            setState(() {
+              _selectedForm = value;
+              _selectedType = MedicationType.values.firstWhere(
+                    (type) => type.toString().split('.').last == value!.toLowerCase().replaceAll(' ', ''),
+                orElse: () => MedicationType.tablet,
+              );
+              _unitController.text = MedicationFormConstants.defaultUnit;
+              _updateSummary();
+            });
+            Navigator.pop(context);
+          },
+          validator: (value) => value == null ? MedicationFormConstants.typeRequiredMessage : null,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -194,62 +240,14 @@ class _MedicationScreenState extends ConsumerState<MedicationScreen> {
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: MedicationFormConstants.formPadding,
-          child: _selectedForm == null && widget.medication == null
-              ? _buildTypeSelection(context)
-              : _buildForm(context),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTypeSelection(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          MedicationFormConstants.selectTypeTitle,
-          style: MedicationFormConstants.titleStyle,
-        ),
-        const SizedBox(height: MedicationFormConstants.sectionSpacing),
-        MedicationFormCard(
-          child: DropdownButtonFormField<String>(
-            decoration: MedicationFormConstants.dropdownDecoration,
-            value: _selectedForm,
-            items: MedicationFormConstants.medicationTypes
-                .map((item) => DropdownMenuItem(value: item, child: Text(item)))
-                .toList(),
-            onChanged: (value) {
-              setState(() {
-                _selectedForm = value;
-                _selectedType = MedicationType.values.firstWhere(
-                      (type) => type.toString().split('.').last == value!.toLowerCase().replaceAll(' ', ''),
-                  orElse: () => MedicationType.tablet,
-                );
-                _unitController.text = MedicationFormConstants.defaultUnit;
-                _updateSummary();
-              });
-            },
-            validator: (value) => value == null ? MedicationFormConstants.typeRequiredMessage : null,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: MedicationFormConstants.formPadding,
+            child: _buildForm(context),
           ),
         ),
-        const SizedBox(height: MedicationFormConstants.sectionSpacing),
-        ElevatedButton(
-          onPressed: () {
-            if (_selectedForm != null) {
-              setState(() {});
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text(MedicationFormConstants.selectTypeMessage)),
-              );
-            }
-          },
-          style: MedicationFormConstants.buttonStyle,
-          child: const Text(MedicationFormConstants.continueButton),
-        ),
-      ],
+      ),
     );
   }
 
@@ -287,17 +285,21 @@ class _MedicationScreenState extends ConsumerState<MedicationScreen> {
                 suffix: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(_unitController.text, style: Theme.of(context).textTheme.bodyLarge),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Text(_unitController.text, style: Theme.of(context).textTheme.bodyMedium),
+                    ),
                     IconButton(
-                      icon: const Icon(Icons.remove),
+                      icon: const Icon(Icons.remove, size: 20),
                       onPressed: () => _decrementField(_concentrationController),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.add),
+                      icon: const Icon(Icons.add, size: 20),
                       onPressed: () => _incrementField(_concentrationController),
                     ),
                   ],
                 ),
+                maxWidth: 200,
               ),
               const SizedBox(height: MedicationFormConstants.fieldSpacing),
               MedicationFormField(
@@ -313,38 +315,34 @@ class _MedicationScreenState extends ConsumerState<MedicationScreen> {
                 suffix: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(MedicationFormConstants.unitsLabel, style: Theme.of(context).textTheme.bodyLarge),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Text(MedicationFormConstants.unitsLabel, style: Theme.of(context).textTheme.bodyMedium),
+                    ),
                     IconButton(
-                      icon: const Icon(Icons.remove),
+                      icon: const Icon(Icons.remove, size: 20),
                       onPressed: () => _decrementField(_quantityController),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.add),
+                      icon: const Icon(Icons.add, size: 20),
                       onPressed: () => _incrementField(_quantityController),
                     ),
                   ],
                 ),
+                maxWidth: 200,
               ),
               const SizedBox(height: MedicationFormConstants.fieldSpacing),
               MedicationFormCard(
-                child: DropdownButtonFormField<String>(
-                  decoration: MedicationFormConstants.dropdownDecoration,
-                  value: _selectedForm,
-                  items: MedicationFormConstants.medicationTypes
-                      .map((item) => DropdownMenuItem(value: item, child: Text(item)))
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedForm = value;
-                      _selectedType = MedicationType.values.firstWhere(
-                            (type) => type.toString().split('.').last == value!.toLowerCase().replaceAll(' ', ''),
-                        orElse: () => MedicationType.tablet,
-                      );
-                      _unitController.text = MedicationFormConstants.defaultUnit;
-                      _updateSummary();
-                    });
-                  },
-                  validator: (value) => value == null ? MedicationFormConstants.typeRequiredMessage : null,
+                child: ListTile(
+                  title: Text(
+                    'Medication Type: ${_selectedForm ?? 'Not set'}',
+                    style: Theme.of(context).textTheme.bodyLarge!.copyWith(
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  trailing: const Icon(Icons.edit, color: Colors.grey, size: 20),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  onTap: () => _showTypeChangeDialog(context),
                 ),
               ),
               const SizedBox(height: MedicationFormConstants.buttonSpacing),

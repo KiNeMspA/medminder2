@@ -1,3 +1,4 @@
+// lib/services/notification_service.dart
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter/services.dart';
@@ -38,7 +39,10 @@ class NotificationService {
       final androidPlugin = _notifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
       final exactAlarm = await androidPlugin?.requestExactAlarmsPermission() ?? true;
       final notifications = await androidPlugin?.requestNotificationsPermission() ?? true;
-      _logger.info('Permissions: exactAlarm=$exactAlarm, notifications=$notifications');
+      _logger.info('Permissions granted: exactAlarm=$exactAlarm, notifications=$notifications');
+      if (!exactAlarm || !notifications) {
+        _logger.warning('Permissions denied: exactAlarm=$exactAlarm, notifications=$notifications');
+      }
       return exactAlarm && notifications;
     } catch (e) {
       _logger.severe('Error requesting permissions: $e');
@@ -114,6 +118,19 @@ class NotificationService {
     }
   }
 
+  Future<void> scheduleTestNotification() async { // Add this method
+    final now = tz.TZDateTime.now(tz.local);
+    final testTime = now.add(const Duration(minutes: 2));
+    await scheduleNotification(
+      'test_notification',
+      'Test Reminder',
+      'This is a test notification',
+      testTime,
+      days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    );
+    _logger.info('Test notification scheduled for $testTime');
+  }
+
   Future<void> cancelNotification(String id) async {
     _logger.info('Cancelling notification: id=$id');
     try {
@@ -126,28 +143,8 @@ class NotificationService {
     }
   }
 
-  Future<void> testNotification() async {
-    _logger.info('Testing immediate notification');
-    try {
-      await _notifications.show(
-        0,
-        'Test Notification',
-        'This is a test notification',
-        const NotificationDetails(
-          android: AndroidNotificationDetails(
-            'medication_channel',
-            'Medication Reminders',
-            channelDescription: 'Notifications for medication reminders',
-            importance: Importance.high,
-            priority: Priority.high,
-            playSound: true,
-            enableVibration: true,
-          ),
-        ),
-      );
-      _logger.info('Test notification shown successfully');
-    } catch (e) {
-      _logger.severe('Failed to show test notification: $e');
-    }
+  Future<void> logPendingNotifications() async { // Add for debugging
+    final pending = await _notifications.pendingNotificationRequests();
+    _logger.info('Pending notifications: ${pending.map((req) => {'id': req.id, 'title': req.title, 'body': req.body}).toList()}');
   }
 }

@@ -12,19 +12,17 @@ import 'services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Initialize logging
   Logger.root.level = Level.ALL;
   Logger.root.onRecord.listen((record) {
     print('${record.level.name}: ${record.time}: ${record.message}');
   });
-  // Initialize timezone
   tz.initializeTimeZones();
-  tz.setLocalLocation(tz.getLocation('Australia/Sydney')); // Set to AEST
+  tz.setLocalLocation(tz.getLocation('Australia/Sydney'));
   await GetStorage.init();
   await DriftService.instance.init();
   final notificationService = NotificationService();
   await notificationService.init();
-  await notificationService.testNotification(); // Test notification
+  await notificationService.scheduleTestNotification(); // Fix method call
   runApp(const ProviderScope(child: MyApp()));
 }
 
