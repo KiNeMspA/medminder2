@@ -1,3 +1,4 @@
+// lib/features/medication/constants/medication_form_constants.dart
 import 'package:flutter/material.dart';
 
 class MedicationFormConstants {
@@ -27,7 +28,7 @@ class MedicationFormConstants {
   static const String cancelButton = 'Cancel';
   static const String proceedButton = 'Proceed';
   static const String continueButton = 'Continue';
-  static const String saveButton = 'Save Medication'; // Added
+  static const String saveButton = 'Save Medication';
   static const List<String> medicationTypes = ['Tablet', 'Injection'];
 
   static String errorSavingMessage(Object error) => 'Error: $error';
@@ -57,23 +58,25 @@ class MedicationFormConstants {
   static InputDecoration textFieldDecoration(String label, String? helperText) => InputDecoration(
     labelText: label,
     helperText: helperText,
+    helperMaxLines: 2, // Allow wrapping for helper text
     border: const OutlineInputBorder(
       borderRadius: BorderRadius.all(Radius.circular(12)),
     ),
     filled: true,
     fillColor: Colors.grey[100],
-    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
   );
 
   static InputDecoration get dropdownDecoration => InputDecoration(
     labelText: 'Medication Type',
-    helperText: 'Choose whether the medication is a tablet or injection',
+    helperText: 'Choose Medication Type',
+    helperMaxLines: 2, // Allow wrapping for helper text
     border: const OutlineInputBorder(
       borderRadius: BorderRadius.all(Radius.circular(12)),
     ),
     filled: true,
     fillColor: Colors.grey[100],
-    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
   );
 
   // Button Style
@@ -82,5 +85,5 @@ class MedicationFormConstants {
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.all(Radius.circular(12)),
     ),
-  ); // Added
+  );
 }

@@ -142,6 +142,8 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
                       decoration: MedicationFormConstants.dropdownDecoration.copyWith(
                         labelText: null,
                         hint: const Text('Select Medication Type'),
+                        helperText: 'Choose Medication Type', // Updated helper text
+                        helperMaxLines: 2, // Allow wrapping
                       ),
                       value: _selectedForm,
                       items: MedicationFormConstants.medicationTypes
@@ -150,7 +152,7 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
                       onChanged: (value) {
                         setState(() {
                           _selectedForm = value;
-                          _selectedType = MedicationType.values.firstWhere(
+                          _selectedType = MedicationType.valuesOfFirstWhere(
                                 (type) => type.toString().split('.').last == value!.toLowerCase().replaceAll(' ', ''),
                             orElse: () => MedicationType.tablet,
                           );
@@ -178,7 +180,7 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
                       label: MedicationFormConstants.nameLabel,
                       helperText: MedicationFormConstants.nameHelper,
                       validator: (value) => value!.isEmpty ? MedicationFormConstants.nameRequiredMessage : null,
-                      maxWidth: 350, // Increase width for name field
+                      maxWidth: 350,
                     ),
                     const SizedBox(height: MedicationFormConstants.fieldSpacing),
                     MedicationFormField(
@@ -186,9 +188,9 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
                       label: MedicationFormConstants.concentrationLabel,
                       helperText: MedicationFormConstants.concentrationHelper,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      validator: (value) => value!.isEmpty
+                      validator: (value) => value != null && value.isEmpty
                           ? MedicationFormConstants.concentrationRequiredMessage
-                          : double.tryParse(value) == null
+                          : value != null && double.tryParse(value) == null
                           ? MedicationFormConstants.invalidNumberMessage
                           : null,
                       suffix: Row(
@@ -198,7 +200,7 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
                             padding: const EdgeInsets.symmetric(horizontal: 8),
                             child: DropdownButton<String>(
                               value: _unit,
-                              items: MedicationMatrix.getConcentrationUnits(_selectedType!)
+                              items: MedicationMatrix.getConcentrationUnits(_selectedType!).toList()
                                   .map((unit) => DropdownMenuItem(value: unit, child: Text(unit)))
                                   .toList(),
                               onChanged: (value) {
@@ -219,7 +221,7 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
                           ),
                         ],
                       ),
-                      maxWidth: 350, // Increase width for concentration field
+                      maxWidth: 350,
                     ),
                     const SizedBox(height: MedicationFormConstants.fieldSpacing),
                     MedicationFormField(
@@ -227,9 +229,9 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
                       label: MedicationFormConstants.quantityLabel,
                       helperText: MedicationFormConstants.quantityHelper,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      validator: (value) => value!.isEmpty
+                      validator: (value) => value != null && value.isEmpty
                           ? MedicationFormConstants.quantityRequiredMessage
-                          : double.tryParse(value) == null
+                          : value != null && double.tryParse(value) == null
                           ? MedicationFormConstants.invalidNumberMessage
                           : null,
                       suffix: Row(
@@ -237,7 +239,7 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
                         children: [
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 8),
-                            child: Text(MedicationFormConstants.unitsLabel,
+                            child: Text(MedicationFormConstants.units trenger,
                                 style: Theme.of(context).textTheme.bodyMedium),
                           ),
                           IconButton(
@@ -250,7 +252,7 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
                           ),
                         ],
                       ),
-                      maxWidth: 350, // Increase width for quantity field
+                      maxWidth: 350,
                     ),
                     const SizedBox(height: MedicationFormConstants.buttonSpacing),
                     ElevatedButton(
