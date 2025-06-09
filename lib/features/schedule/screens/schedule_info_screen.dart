@@ -197,22 +197,25 @@ class _SchedulesInfoScreenState extends ConsumerState<SchedulesInfoScreen> {
             cells: [
               DataCell(Text(schedule.medicationName)),
               ...['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(
-                (day) => DataCell(
+                    (day) => DataCell(
                   schedule.days.contains(day)
                       ? FutureBuilder<String>(
-                          future: _getDoseStatus(schedule, ref),
-                          builder: (context, snapshot) {
-                            final status = snapshot.data ?? 'Upcoming';
-                            final statusColor = {
-                              'Taken': Colors.green,
-                              'Missed': Colors.red,
-                              'Postponed': Colors.orange,
-                              'Cancelled': Colors.red,
-                              'Upcoming': Colors.blue,
-                            }[status]!;
-                            return Text(DateFormat.jm().format(schedule.time), style: TextStyle(color: statusColor));
-                          },
-                        )
+                    future: _getDoseStatus(schedule, ref, day),
+                    builder: (context, snapshot) {
+                      final status = snapshot.data ?? 'Upcoming';
+                      final statusColor = {
+                        'Taken': Colors.green,
+                        'Missed': Colors.red,
+                        'Postponed': Colors.orange,
+                        'Cancelled': Colors.red,
+                        'Upcoming': Colors.blue,
+                      }[status]!;
+                      return Text(
+                        DateFormat.jm().format(schedule.time),
+                        style: TextStyle(color: statusColor),
+                      );
+                    },
+                  )
                       : const Text('-'),
                 ),
               ),

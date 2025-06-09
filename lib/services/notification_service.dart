@@ -15,11 +15,17 @@ class NotificationService {
   final Logger _logger = Logger('NotificationService');
   late tz.Location _local;
 
+
+  NotificationService() {
+    _local = tz.getLocation('Australia/Sydney'); // Initialize with default timezone
+  }
+
+
   Future<void> initialize() async {
     _logger.info('Initializing notification service');
-    tz.initializeTimeZones();
     try {
-      _local = tz.getLocation('Australia/Sydney'); // Set to AEST
+      tz.initializeTimeZones();
+      _local = tz.getLocation('Australia/Sydney'); // Reassign after initialization
       _logger.info('Timezone initialized: ${_local.name}');
     } catch (e) {
       _logger.severe('Failed to initialize timezone: $e');
@@ -33,6 +39,8 @@ class NotificationService {
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
     await androidPlugin?.requestNotificationsPermission();
   }
+
+  // Rest of the class remains unchanged
 
   Future<void> scheduleNotification({
     required String id,
@@ -92,5 +100,10 @@ class NotificationService {
   Future<void> cancelAllNotifications() async {
     await _flutterLocalNotificationsPlugin.cancelAll();
     _logger.info('Cancelled all notifications');
+  }
+
+  int _weekdayToIndex(String day) {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return days.indexOf(day) + 1;
   }
 }

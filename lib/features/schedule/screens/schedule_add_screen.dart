@@ -71,10 +71,46 @@ class _SchedulesAddScreenState extends ConsumerState<SchedulesAddScreen> {
     final meds = await ref.read(driftServiceProvider).getMedications();
     setState(() {
       _medications = meds;
+      _logger.info('Loaded ${meds.length} medications');
     });
     if (_selectedMedicationId != null) {
-      _loadDoses();
+      final med = _medications.firstWhere(
+            (m) => m.id == _selectedMedicationId!,
+        orElse: () => Medication(
+          id: -1,
+          name: 'Not Found',
+          concentration: 0,
+          concentrationUnit: '',
+          stockQuantity: 0,
+          form: '',
+        ),
+      );
+      if (med.id != -1) {
+        setState(() {
+          _selectedMedicationName = med.name;
+          _logger.info('Selected medication: ${med.name} (ID: ${med.id})');
+        });
+        await _loadDoses();
+      } else {
+        _logger.severe('Medication ID $_selectedMedicationId not found');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Medication not found')),
+        );
+      }
     }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _logger.info('Initializing SchedulesAddScreen with medicationId: ${widget.medicationId}');
+    if (widget.medicationId != null) {
+      _selectedMedicationId = widget.medicationId;
+      _loadMedications();
+    } else {
+      _loadMedications();
+    }
+    _nameController.addListener(() => setState(() {}));
   }
 
   Future<void> _loadDoses() async {

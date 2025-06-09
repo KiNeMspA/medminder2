@@ -42,7 +42,6 @@ mixin ControllerMixin<T extends StatefulWidget> on State<T> {
 // --- FILE BREAK ---
 
 // File: lib/common/theme/app_theme.dart
-// lib/common/theme/app_theme.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -68,7 +67,7 @@ final appTheme = ThemeData(
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     color: Colors.white.withOpacity(0.9),
     shadowColor: Colors.black26,
-    margin: EdgeInsets.zero, // Explicitly remove margins
+    margin: EdgeInsets.zero,
   ),
   textTheme: TextTheme(
     displayLarge: GoogleFonts.poppins(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.black87),
@@ -90,13 +89,16 @@ final appTheme = ThemeData(
     labelStyle: GoogleFonts.poppins(color: Colors.black54),
     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
   ),
+
   bottomNavigationBarTheme: const BottomNavigationBarThemeData(
     backgroundColor: Colors.white,
     selectedItemColor: Colors.blue,
-    unselectedItemColor: Colors.black54, // Distinct color for inactive items
+    unselectedItemColor: const Color(0xFFBABABA), // Explicit dark gray
     selectedLabelStyle: TextStyle(fontWeight: FontWeight.bold),
     unselectedLabelStyle: TextStyle(fontWeight: FontWeight.normal),
+    type: BottomNavigationBarType.fixed, // Ensure consistent rendering
   ),
+
   elevatedButtonTheme: ElevatedButtonThemeData(
     style: ElevatedButton.styleFrom(
       backgroundColor: const Color(0xFF6200EE),
@@ -602,6 +604,10 @@ class AppDatabase extends _$AppDatabase {
     final doseId = await into(doses).insert(dose);
     await _logDatabase();
     return doseId;
+  }
+
+  Future<List<DoseHistoryData>> getDoseHistory(int doseId) async {
+    return (select(doseHistory)..where((tbl) => tbl.doseId.equals(doseId))).get();
   }
 
   Future<void> updateDose(int id, DosesCompanion dose) async {
@@ -4486,7 +4492,8 @@ import '../../../services/drift_service.dart';
 import '../../medication/constants/medication_form_constants.dart';
 
 class DosesAddScreen extends ConsumerStatefulWidget {
-  const DosesAddScreen({super.key});
+  final int? medicationId;
+  const DosesAddScreen({super.key, this.medicationId});
 
   @override
   ConsumerState<DosesAddScreen> createState() => _DosesAddScreenState();
@@ -4504,7 +4511,18 @@ class _DosesAddScreenState extends ConsumerState<DosesAddScreen> {
   @override
   void initState() {
     super.initState();
-    _loadMedications();
+    if (widget.medicationId != null) {
+      _selectedMedicationId = widget.medicationId;
+      _loadMedications().then((_) {
+        final med = _medications.firstWhere((m) => m.id == widget.medicationId);
+        setState(() {
+          _selectedMedicationName = med.name;
+          _updateSummary();
+        });
+      });
+    } else {
+      _loadMedications();
+    }
     _amountController.addListener(_updateSummary);
   }
 
@@ -4549,7 +4567,7 @@ class _DosesAddScreenState extends ConsumerState<DosesAddScreen> {
     final amount = double.tryParse(_amountController.text) ?? 0;
     if (_selectedMedicationId == null || amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a medication and enter a valid amount')),
+        const SnackBar(content: Text('Please enter a valid amount')),
       );
       return;
     }
@@ -5325,17 +5343,60 @@ class MedicationCard extends ConsumerWidget {
 // File: lib/features/home/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:intl/intl.dart';
 import '../../common/utils/formatters.dart';
 import '../../data/database.dart';
 import '../../services/drift_service.dart';
+import '../../services/dose_service.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
+  void _showDoseDialog(BuildContext context, WidgetRef ref, Schedule schedule) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Dose: ${schedule.medicationName}'),
+        content: Text('Time: ${DateFormat.jm().format(schedule.time)}'),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await ref.read(doseServiceProvider).takeDose(
+                schedule.medicationId,
+                schedule.doseId!,
+                1.0,
+              );
+              ref.invalidate(schedulesProvider);
+              Navigator.pop(context);
+            },
+            child: const Text('Take', style: TextStyle(color: Colors.green)),
+          ),
+          TextButton(
+            onPressed: () async {
+              await ref.read(doseServiceProvider).snoozeDose(schedule.id);
+              ref.invalidate(schedulesProvider);
+              Navigator.pop(context);
+            },
+            child: const Text('Snooze', style: TextStyle(color: Colors.orange)),
+          ),
+          TextButton(
+            onPressed: () async {
+              await ref.read(doseServiceProvider).cancelDose(schedule.id);
+              ref.invalidate(schedulesProvider);
+              Navigator.pop(context);
+            },
+            child: const Text('Cancel', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
   Widget build(BuildContext context, WidgetRef ref) {
     final medicationsAsync = ref.watch(medicationsProvider);
     final dosesAsync = ref.watch(allDosesProvider);
+    final schedulesAsync = ref.watch(schedulesProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -5361,23 +5422,39 @@ class HomeScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Doses', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            dosesAsync.when(
-              data: (doses) => doses.isEmpty
+            const Text('Upcoming Doses', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            schedulesAsync.when(
+              data: (schedules) => schedules.isEmpty
                   ? const Padding(
                 padding: EdgeInsets.symmetric(vertical: 8),
-                child: Text('No doses scheduled'),
+                child: Text('No schedules'),
               )
-                  : Column(
-                children: doses.take(3).map((dose) => Card(
-                  margin: const EdgeInsets.symmetric(vertical: 4),
-                  child: ListTile(
-                    title: Text('${dose.name ?? 'Unnamed'} - ${Utils.removeTrailingZeros(dose.amount)} ${dose.unit}'),
-                    subtitle: Text('Medication ID: ${dose.medicationId}'),
-                    trailing: const Icon(Icons.arrow_forward),
-                    onTap: () => Navigator.pushNamed(context, '/doses/info', arguments: dose.id),
-                  ),
-                )).toList(),
+                  : FutureBuilder<List<Schedule>>(
+                future: Future.wait(schedules.map((s) async {
+                  final isAvailable = await ref.read(doseServiceProvider).isDoseAvailableToday(s);
+                  return isAvailable ? s : null;
+                })).then((list) => list.whereType<Schedule>().toList()),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) return const CircularProgressIndicator();
+                  final upcoming = snapshot.data!;
+                  if (upcoming.isEmpty) return const Text('No upcoming doses today');
+                  return Column(
+                    children: upcoming.map((schedule) {
+                      return Card(
+                        margin: const EdgeInsets.symmetric(vertical: 4),
+                        child: ListTile(
+                          title: Text(schedule.medicationName),
+                          subtitle: Text(
+                            'Time: ${DateFormat.jm().format(schedule.time)}, Days: ${schedule.days.join(', ')}',
+                          ),
+                          onTap: schedule.doseId != null
+                              ? () => _showDoseDialog(context, ref, schedule)
+                              : null,
+                        ),
+                      );
+                    }).toList(),
+                  );
+                },
               ),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => _buildErrorWidget(context, e.toString()),
@@ -5401,7 +5478,7 @@ class HomeScreen extends ConsumerWidget {
                     trailing: med.stockQuantity < 10
                         ? const Chip(label: Text('Low Stock'), backgroundColor: Colors.red)
                         : null,
-                    onTap: () => Navigator.pushNamed(context, '/medications/info', arguments: med.id),
+                    onTap: () => Navigator.pushNamed(context, '/medications/edit', arguments: med.id),
                   ),
                 )).toList(),
               ),
@@ -5416,16 +5493,37 @@ class HomeScreen extends ConsumerWidget {
                 children: [
                   const ListTile(
                     title: Text('Weekly Adherence'),
-                    subtitle: Text('Adherence tracking not yet implemented'), // Placeholder
+                    subtitle: Text('Based on taken doses over the past 7 days'),
                   ),
                   SizedBox(
                     height: 200,
-                    child: Center(
-                      child: Text(
-                        'Adherence chart placeholder\n(Use fl_chart package for visualization)',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-                      ),
+                    child: dosesAsync.when(
+                      data: (doses) {
+                        final takenDoses = doses.where((dose) => dose.taken).length;
+                        final totalDoses = doses.length;
+                        final adherence = totalDoses > 0 ? (takenDoses / totalDoses * 100).toInt() : 0;
+                        return PieChart(
+                          PieChartData(
+                            sections: [
+                              PieChartSectionData(
+                                value: adherence.toDouble(),
+                                color: Colors.green,
+                                title: '$adherence%',
+                                radius: 50,
+                              ),
+                              PieChartSectionData(
+                                value: (100 - adherence).toDouble(),
+                                color: Colors.red,
+                                title: '${100 - adherence}%',
+                                radius: 50,
+                              ),
+                            ],
+                            centerSpaceRadius: 40,
+                          ),
+                        );
+                      },
+                      loading: () => const CircularProgressIndicator(),
+                      error: (e, _) => Text('Error: $e'),
                     ),
                   ),
                 ],
@@ -6085,7 +6183,7 @@ import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../common/constants/app_strings.dart';
-import '../../../core/medication_matrix.dart';
+import '../../../common/medication_matrix.dart';
 import '../../../common/utils/formatters.dart';
 import '../../../data/database.dart';
 import '../../../services/drift_service.dart';
@@ -6684,19 +6782,8 @@ class MedicationsInfoScreen extends ConsumerWidget {
                 subtitle: Text(
                   '${med.form} - ${Utils.removeTrailingZeros(med.concentration)}${med.concentrationUnit}, Stock: ${Utils.removeTrailingZeros(med.stockQuantity)}',
                 ),
-                trailing: IconButton(
-                  icon: const Icon(Icons.edit),
-                  onPressed: () => Navigator.pushNamed(
-                    context,
-                    '/medications/edit',
-                    arguments: med.id,
-                  ),
-                ),
-                onTap: () => Navigator.pushNamed(
-                  context,
-                  '/medications/edit',
-                  arguments: med.id,
-                ),
+                trailing: null,
+                onTap: () => Navigator.pushNamed(context, '/medications/edit', arguments: med.id),
               ),
             );
           },
@@ -6720,70 +6807,224 @@ class MedicationsInfoScreen extends ConsumerWidget {
 
 // --- FILE BREAK ---
 
-// File: lib/features/medication/screens/medication_list_screen.dart
+// File: lib/features/medication/screens/medication_overview_screen.dart
+import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../common/utils/formatters.dart';
 import '../../../data/database.dart';
 import '../../../services/drift_service.dart';
-import 'medication_add_screen.dart';
-import 'medication_info_screen.dart';
+import '../../dose/screens/dose_add_screen.dart';
+import '../constants/medication_form_constants.dart';
+import '../../../widgets/form_widgets.dart';
 
-class MedicationListScreen extends ConsumerWidget {
-  const MedicationListScreen({super.key});
+class MedicationOverviewScreen extends ConsumerWidget {
+  final int medicationId;
+  const MedicationOverviewScreen({super.key, required this.medicationId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final medicationsAsync = ref.watch(medicationsProvider);
+    final medicationAsync = ref.watch(medicationsProvider);
+    final dosesAsync = ref.watch(allDosesProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Medications'),
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Theme.of(context).colorScheme.primary,
-                Theme.of(context).colorScheme.primary.withOpacity(0.8),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+    return medicationAsync.when(
+      data: (meds) {
+        final med = meds.firstWhere((m) => m.id == medicationId);
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(med.name),
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            foregroundColor: Colors.white,
+            flexibleSpace: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Theme.of(context).colorScheme.primary,
+                    Theme.of(context).colorScheme.primary.withOpacity(0.8),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
             ),
           ),
-        ),
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: medicationsAsync.when(
-        data: (meds) => meds.isEmpty
-            ? const Center(child: Text('No medications added'))
-            : ListView.builder(
-          itemCount: meds.length,
-          itemBuilder: (context, index) {
-            final med = meds[index];
-            return ListTile(
-              title: Text(med.name),
-              subtitle: Text(
-                '${Utils.removeTrailingZeros(med.stockQuantity)} x ${Utils.removeTrailingZeros(med.concentration)}${med.concentrationUnit} ${med.form}',
-              ),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => MedicationInfoScreen(medication: med)),
-              ),
-            );
-          },
-        ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const MedicationFormScreen()),
-        ).then((_) => ref.invalidate(medicationsProvider)),
-        child: const Icon(Icons.add),
-      ),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Card(
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  child: ListTile(
+                    title: const Text('Name'),
+                    subtitle: Text(med.name),
+                    trailing: const Icon(Icons.edit),
+                    onTap: () => _editField(context, ref, med, 'name', med.name),
+                  ),
+                ),
+                Card(
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  child: ListTile(
+                    title: const Text('Concentration'),
+                    subtitle: Text('${Utils.removeTrailingZeros(med.concentration)} ${med.concentrationUnit}'),
+                    trailing: const Icon(Icons.edit),
+                    onTap: () => _editField(context, ref, med, 'concentration', med.concentration.toString()),
+                  ),
+                ),
+                Card(
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  child: ListTile(
+                    title: const Text('Stock Quantity'),
+                    subtitle: Text('${Utils.removeTrailingZeros(med.stockQuantity)} ${med.form}'),
+                    trailing: const Icon(Icons.edit),
+                    onTap: () => _editField(context, ref, med, 'stockQuantity', med.stockQuantity.toString()),
+                  ),
+                ),
+                Card(
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  child: ListTile(
+                    title: const Text('Form'),
+                    subtitle: Text(med.form),
+                    trailing: const Icon(Icons.edit),
+                    onTap: () => _editField(context, ref, med, 'form', med.form),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text('Doses', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                dosesAsync.when(
+                  data: (doses) {
+                    final medDoses = doses.where((dose) => dose.medicationId == medicationId).toList();
+                    return medDoses.isEmpty
+                        ? const Text('No doses added')
+                        : Column(
+                      children: medDoses.map((dose) => Card(
+                        margin: const EdgeInsets.symmetric(vertical: 4),
+                        child: ListTile(
+                          title: Text(dose.name ?? 'Unnamed'),
+                          subtitle: Text('${Utils.removeTrailingZeros(dose.amount)} ${dose.unit}'),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit),
+                                onPressed: () => Navigator.pushNamed(context, '/doses/edit', arguments: dose.id),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete),
+                                onPressed: () async {
+                                  final confirm = await showDialog<bool>(
+                                    context: context,
+                                    builder: (context) => AlertDialog(
+                                      title: const Text('Delete Dose'),
+                                      content: const Text('Are you sure you want to delete this dose?'),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(context, false),
+                                          child: const Text('Cancel'),
+                                        ),
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(context, true),
+                                          child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                  if (confirm == true) {
+                                    await ref.read(driftServiceProvider).deleteDose(dose.id);
+                                    ref.invalidate(allDosesProvider);
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                          onTap: () => Navigator.pushNamed(context, '/doses/edit', arguments: dose.id),
+                        ),
+                      )).toList(),
+                    );
+                  },
+                  loading: () => const CircularProgressIndicator(),
+                  error: (e, _) => Text('Error: $e'),
+                ),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add Dose'),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => DosesAddScreen(medicationId: medicationId)),
+                  ).then((_) => ref.invalidate(allDosesProvider)),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.calendar_today),
+                  label: const Text('Add Schedule'),
+                  onPressed: () async {
+                    final doses = await ref.read(driftServiceProvider).getDoses(medicationId);
+                    if (doses.isEmpty) {
+                      await showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('No Doses Available'),
+                          content: const Text('You must add at least one dose before creating a schedule.'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('OK'),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => DosesAddScreen(medicationId: medicationId)),
+                                );
+                              },
+                              child: const Text('Add Dose'),
+                            ),
+                          ],
+                        ),
+                      );
+                      return;
+                    }
+                    Navigator.pushNamed(context, '/schedules/add', arguments: medicationId);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (e, _) => Scaffold(body: Center(child: Text('Error: $e'))),
     );
+  }
+
+  Future<void> _editField(BuildContext context, WidgetRef ref, Medication med, String field, String initialValue) async {
+    final newValue = await FormWidgets.showInputDialog(
+      context: context,
+      title: 'Edit $field',
+      initialValue: initialValue,
+      label: field,
+      keyboardType: field == 'concentration' || field == 'stockQuantity' ? TextInputType.number : TextInputType.text,
+      validator: (value) => value!.isEmpty ? '$field is required' : null,
+    );
+    if (newValue != null) {
+      final update = MedicationsCompanion(
+        id: drift.Value(med.id),
+        name: field == 'name' ? drift.Value(newValue) : drift.Value(med.name),
+        concentration: field == 'concentration' ? drift.Value(double.parse(newValue)) : drift.Value(med.concentration),
+        concentrationUnit: drift.Value(med.concentrationUnit),
+        stockQuantity: field == 'stockQuantity' ? drift.Value(double.parse(newValue)) : drift.Value(med.stockQuantity),
+        form: field == 'form' ? drift.Value(newValue) : drift.Value(med.form),
+      );
+      await ref.read(driftServiceProvider).updateMedication(update);
+      ref.invalidate(medicationsProvider);
+    }
   }
 }
 
@@ -7718,13 +7959,16 @@ class ScheduleFormConstants {
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:logging/logging.dart';
 import '../../../data/database.dart';
 import '../../../services/drift_service.dart';
 import '../../../services/notification_service.dart';
 import '../../medication/constants/medication_form_constants.dart';
 
 class SchedulesAddScreen extends ConsumerStatefulWidget {
-  const SchedulesAddScreen({super.key});
+  final int? medicationId;
+
+  const SchedulesAddScreen({super.key, this.medicationId});
 
   @override
   ConsumerState<SchedulesAddScreen> createState() => _SchedulesAddScreenState();
@@ -7732,18 +7976,53 @@ class SchedulesAddScreen extends ConsumerStatefulWidget {
 
 class _SchedulesAddScreenState extends ConsumerState<SchedulesAddScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
   int? _selectedMedicationId;
   String? _selectedMedicationName;
   TimeOfDay _selectedTime = TimeOfDay.now();
   List<String> _selectedDays = [];
   bool _notificationsEnabled = true;
+  int? _selectedDoseId;
   int _currentStep = 0;
   List<Medication> _medications = [];
+  List<Dose> _doses = [];
+  final Logger _logger = Logger('SchedulesAddScreen');
 
   @override
   void initState() {
     super.initState();
-    _loadMedications();
+    _logger.info('Initializing SchedulesAddScreen with medicationId: ${widget.medicationId}');
+    if (widget.medicationId != null) {
+      _selectedMedicationId = widget.medicationId;
+      _loadMedications().then((_) {
+        final med = _medications.firstWhere(
+              (m) => m.id == widget.medicationId!,
+          orElse: () => Medication(id: -1, name: 'Not Found', concentration: 0, concentrationUnit: '', stockQuantity: 0, form: ''),
+        );
+        if (med.id != -1) {
+          setState(() {
+            _selectedMedicationId = med.id;
+            _selectedMedicationName = med.name;
+            _logger.info('Pre-selected medication: ${med.name} (ID: ${med.id})');
+          });
+          _loadDoses();
+        } else {
+          _logger.severe('Medication ID ${widget.medicationId} not found');
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Medication not found')),
+          );
+        }
+      });
+    } else {
+      _loadMedications();
+    }
+    _nameController.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadMedications() async {
@@ -7751,32 +8030,38 @@ class _SchedulesAddScreenState extends ConsumerState<SchedulesAddScreen> {
     setState(() {
       _medications = meds;
     });
+    if (_selectedMedicationId != null) {
+      _loadDoses();
+    }
+  }
+
+  Future<void> _loadDoses() async {
+    if (_selectedMedicationId == null) return;
+    final doses = await ref.read(driftServiceProvider).getDoses(_selectedMedicationId!);
+    setState(() {
+      _doses = doses;
+    });
   }
 
   String get _summary {
     if (_selectedMedicationName == null || _selectedDays.isEmpty) return '';
-    return 'Schedule: $_selectedMedicationName at ${_selectedTime.format(context)} on ${_selectedDays.join(', ')}';
+    final doseText = _selectedDoseId != null ? 'Dose ID: $_selectedDoseId, ' : '';
+    return 'Schedule: $_selectedMedicationName at ${_selectedTime.format(context)} on ${_selectedDays.join(', ')}\n$doseText: ${_nameController.text.isEmpty ? 'Unnamed' : _nameController.text}';
   }
 
   void _saveSchedule() async {
     if (!_formKey.currentState!.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please complete all required fields')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please complete all required fields')));
       return;
     }
 
     if (_selectedMedicationId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a medication')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a medication')));
       return;
     }
 
     if (_selectedDays.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select at least one day')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select at least one day')));
       return;
     }
 
@@ -7784,34 +8069,36 @@ class _SchedulesAddScreenState extends ConsumerState<SchedulesAddScreen> {
     final schedule = SchedulesCompanion(
       medicationId: drift.Value(_selectedMedicationId!),
       medicationName: drift.Value(_selectedMedicationName!),
-      frequency: drift.Value('Daily'), // Default frequency
+      frequency: drift.Value('Daily'),
       time: drift.Value(DateTime.now().copyWith(hour: _selectedTime.hour, minute: _selectedTime.minute)),
       days: drift.Value(_selectedDays),
+      name: drift.Value(_nameController.text.isEmpty ? 'Unnamed' : _nameController.text),
+      doseId: _selectedDoseId != null ? drift.Value(_selectedDoseId!) : const drift.Value.absent(),
       notificationsEnabled: drift.Value(_notificationsEnabled),
       notificationId: drift.Value(notificationId),
     );
 
     try {
-      await ref.read(driftServiceProvider).addSchedule(schedule);
+      _logger.info('Saving schedule: $schedule');
+      final scheduleId = await ref.read(driftServiceProvider).addSchedule(schedule);
       if (_notificationsEnabled) {
-        await ref.read(notificationServiceProvider).scheduleNotification(
-          id: notificationId,
-          title: 'MedMinder: $_selectedMedicationName',
-          body: 'Time for your dose!',
-          scheduledTime: DateTime.now().copyWith(hour: _selectedTime.hour, minute: _selectedTime.minute),
-          days: _selectedDays,
-        );
+        await ref
+            .read(notificationServiceProvider)
+            .scheduleNotification(
+              id: notificationId,
+              title: 'MedMinder: $_selectedMedicationName',
+              body: 'Time for your dose!',
+              scheduledTime: DateTime.now().copyWith(hour: _selectedTime.hour, minute: _selectedTime.minute),
+              days: _selectedDays,
+            );
+        _logger.info('Scheduled notification for schedule ID: $scheduleId');
       }
       ref.invalidate(schedulesProvider);
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Schedule added')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Schedule added')));
     } catch (e, stack) {
-      debugPrint('Error adding schedule: $e\n$stack');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error adding schedule: $e')),
-      );
+      _logger.severe('Error adding schedule: $e\n$stack');
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error adding schedule: $e')));
     }
   }
 
@@ -7834,7 +8121,10 @@ class _SchedulesAddScreenState extends ConsumerState<SchedulesAddScreen> {
                       setState(() {
                         _selectedMedicationId = med.id;
                         _selectedMedicationName = med.name;
+                        _selectedDoseId = null;
+                        _doses = [];
                       });
+                      _loadDoses();
                     }
                   },
                 );
@@ -7846,13 +8136,51 @@ class _SchedulesAddScreenState extends ConsumerState<SchedulesAddScreen> {
         state: _currentStep > 0 ? StepState.complete : StepState.indexed,
       ),
       Step(
+        title: const Text('Select Dose (Optional)'),
+        content: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            DropdownButtonFormField<int>(
+              value: _selectedDoseId,
+              items: [
+                const DropdownMenuItem<int>(value: null, child: Text('None')),
+                ..._doses.map(
+                  (dose) => DropdownMenuItem<int>(
+                    value: dose.id,
+                    child: Text('${dose.amount} ${dose.unit} (${dose.name ?? 'Unnamed'})'),
+                  ),
+                ),
+              ],
+              onChanged: (value) {
+                setState(() {
+                  _selectedDoseId = value;
+                });
+              },
+              decoration: const InputDecoration(labelText: 'Dose', border: OutlineInputBorder()),
+            ),
+          ],
+        ),
+        isActive: _currentStep == 1,
+        state: _currentStep > 1 ? StepState.complete : StepState.indexed,
+      ),
+      Step(
+        title: const Text('Schedule Name'),
+        content: TextFormField(
+          controller: _nameController,
+          decoration: const InputDecoration(
+            labelText: 'Schedule Name',
+            hintText: 'e.g., Morning Dose',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        isActive: _currentStep == 2,
+        state: _currentStep > 2 ? StepState.complete : StepState.indexed,
+      ),
+      Step(
         title: const Text('Schedule Time'),
         content: ElevatedButton(
           onPressed: () async {
-            final time = await showTimePicker(
-              context: context,
-              initialTime: _selectedTime,
-            );
+            final time = await showTimePicker(context: context, initialTime: _selectedTime);
             if (time != null) {
               setState(() {
                 _selectedTime = time;
@@ -7861,8 +8189,8 @@ class _SchedulesAddScreenState extends ConsumerState<SchedulesAddScreen> {
           },
           child: Text('Select Time: ${_selectedTime.format(context)}'),
         ),
-        isActive: _currentStep == 1,
-        state: _currentStep > 1 ? StepState.complete : StepState.indexed,
+        isActive: _currentStep == 3,
+        state: _currentStep > 3 ? StepState.complete : StepState.indexed,
       ),
       Step(
         title: const Text('Select Days'),
@@ -7885,8 +8213,8 @@ class _SchedulesAddScreenState extends ConsumerState<SchedulesAddScreen> {
             );
           }).toList(),
         ),
-        isActive: _currentStep == 2,
-        state: _currentStep > 2 ? StepState.complete : StepState.indexed,
+        isActive: _currentStep == 4,
+        state: _currentStep > 4 ? StepState.complete : StepState.indexed,
       ),
       Step(
         title: const Text('Notifications'),
@@ -7897,14 +8225,14 @@ class _SchedulesAddScreenState extends ConsumerState<SchedulesAddScreen> {
             _notificationsEnabled = value;
           }),
         ),
-        isActive: _currentStep == 3,
-        state: _currentStep > 3 ? StepState.complete : StepState.indexed,
+        isActive: _currentStep == 5,
+        state: _currentStep > 5 ? StepState.complete : StepState.indexed,
       ),
       Step(
         title: const Text('Confirm'),
         content: Text(_summary.isEmpty ? 'Please complete all steps' : _summary),
-        isActive: _currentStep == 4,
-        state: _currentStep > 4 ? StepState.complete : StepState.indexed,
+        isActive: _currentStep == 6,
+        state: _currentStep > 6 ? StepState.complete : StepState.indexed,
       ),
     ];
   }
@@ -7920,10 +8248,7 @@ class _SchedulesAddScreenState extends ConsumerState<SchedulesAddScreen> {
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [
-                Theme.of(context).colorScheme.primary,
-                Theme.of(context).colorScheme.primary.withOpacity(0.8),
-              ],
+              colors: [Theme.of(context).colorScheme.primary, Theme.of(context).colorScheme.primary.withOpacity(0.8)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -7952,15 +8277,15 @@ class _SchedulesAddScreenState extends ConsumerState<SchedulesAddScreen> {
                     currentStep: _currentStep,
                     onStepContinue: () {
                       if (_currentStep == 0 && _selectedMedicationId == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Please select a medication')),
-                        );
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(const SnackBar(content: Text('Please select a medication')));
                         return;
                       }
-                      if (_currentStep == 2 && _selectedDays.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Please select at least one day')),
-                        );
+                      if (_currentStep == 4 && _selectedDays.isEmpty) {
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(const SnackBar(content: Text('Please select at least one day')));
                         return;
                       }
                       if (_currentStep < _buildSteps().length - 1) {
@@ -7982,10 +8307,7 @@ class _SchedulesAddScreenState extends ConsumerState<SchedulesAddScreen> {
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
                             if (details.onStepCancel != null)
-                              TextButton(
-                                onPressed: details.onStepCancel,
-                                child: const Text('Back'),
-                              ),
+                              TextButton(onPressed: details.onStepCancel, child: const Text('Back')),
                             const SizedBox(width: 8),
                             ElevatedButton(
                               onPressed: details.onStepContinue,
@@ -8318,14 +8640,25 @@ class _SchedulesEditScreenState extends ConsumerState<SchedulesEditScreen> {
 // File: lib/features/schedule/screens/schedule_info_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../../data/database.dart';
 import '../../../services/drift_service.dart';
+import '../../../services/dose_service.dart';
 
-class SchedulesInfoScreen extends ConsumerWidget {
+enum ScheduleView { list, day, week, month }
+
+class SchedulesInfoScreen extends ConsumerStatefulWidget {
   const SchedulesInfoScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SchedulesInfoScreen> createState() => _SchedulesInfoScreenState();
+}
+
+class _SchedulesInfoScreenState extends ConsumerState<SchedulesInfoScreen> {
+  ScheduleView _currentView = ScheduleView.list;
+
+  @override
+  Widget build(BuildContext context) {
     final schedulesAsync = ref.watch(schedulesProvider);
 
     return Scaffold(
@@ -8337,33 +8670,26 @@ class SchedulesInfoScreen extends ConsumerWidget {
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [
-                Theme.of(context).colorScheme.primary,
-                Theme.of(context).colorScheme.primary.withOpacity(0.8),
-              ],
+              colors: [Theme.of(context).colorScheme.primary, Theme.of(context).colorScheme.primary.withOpacity(0.8)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
           ),
         ),
+        actions: [
+          DropdownButton<ScheduleView>(
+            value: _currentView,
+            icon: const Icon(Icons.view_list, color: Colors.white),
+            onChanged: (view) => setState(() => _currentView = view!),
+            items: ScheduleView.values
+                .map((view) => DropdownMenuItem(value: view, child: Text(view.toString().split('.').last)))
+                .toList(),
+          ),
+        ],
       ),
       body: schedulesAsync.when(
-        data: (schedules) => schedules.isEmpty
-            ? const Center(child: Text('No schedules'))
-            : ListView.builder(
-          itemCount: schedules.length,
-          itemBuilder: (context, index) => Card(
-            margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
-            child: ListTile(
-              title: Text(schedules[index].medicationName),
-              subtitle: Text('Time: ${schedules[index].time.toString().substring(11, 16)}, Days: ${schedules[index].days.join(', ')}'),
-              trailing: IconButton(
-                icon: const Icon(Icons.edit),
-                onPressed: () => Navigator.pushNamed(context, '/schedules/edit', arguments: schedules[index].id),
-              ),
-            ),
-          ),
-        ),
+        data: (schedules) =>
+            schedules.isEmpty ? const Center(child: Text('No schedules')) : _buildView(context, ref, schedules),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Card(
           margin: const EdgeInsets.all(16),
@@ -8378,6 +8704,172 @@ class SchedulesInfoScreen extends ConsumerWidget {
         child: const Icon(Icons.add),
       ),
     );
+  }
+
+  Widget _buildView(BuildContext context, WidgetRef ref, List<Schedule> schedules) {
+    switch (_currentView) {
+      case ScheduleView.list:
+        return ListView.builder(
+          itemCount: schedules.length,
+          itemBuilder: (context, index) => _buildScheduleRow(context, ref, schedules[index]),
+        );
+      case ScheduleView.day:
+        return _buildDayView(context, ref, schedules);
+      case ScheduleView.week:
+        return _buildWeekView(context, ref, schedules);
+      case ScheduleView.month:
+        return _buildMonthView(context, ref, schedules);
+    }
+  }
+
+  Future<String> _getDoseStatus(Schedule schedule, WidgetRef ref, [String? day]) async {
+    final now = DateTime.now();
+    final targetDay = day != null ? _weekdayToIndex(day) : now.weekday;
+    final isScheduled = schedule.frequency == 'Daily' || schedule.days.contains(day ?? _weekdayToString(now.weekday));
+    if (!isScheduled) return 'Upcoming';
+    final targetDate = _getDateForDay(now, targetDay);
+    final scheduleTime = DateTime(
+      targetDate.year,
+      targetDate.month,
+      targetDate.day,
+      schedule.time.hour,
+      schedule.time.minute,
+    );
+    final gracePeriod = const Duration(hours: 1); // TODO: Make editable in settings
+    if (scheduleTime.add(gracePeriod).isAfter(now)) return 'Upcoming';
+    final history = await ref.read(driftServiceProvider).getDoseHistory(schedule.doseId ?? -1);
+    if (history.any((h) => h.takenAt.isAfter(scheduleTime.subtract(const Duration(minutes: 1))))) {
+      return 'Taken';
+    }
+    // Placeholder: Check for Postponed/Cancelled
+    return 'Missed';
+  }
+
+  DateTime _getDateForDay(DateTime now, int targetDay) {
+    final currentDay = now.weekday;
+    final daysDiff = (targetDay - currentDay + 7) % 7;
+    return now.add(Duration(days: daysDiff));
+  }
+
+  int _weekdayToIndex(String day) {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return days.indexOf(day) + 1;
+  }
+
+  Widget _buildScheduleRow(BuildContext context, WidgetRef ref, Schedule schedule) {
+    return FutureBuilder<String>(
+      future: _getDoseStatus(schedule, ref),
+      builder: (context, snapshot) {
+        final status = snapshot.data ?? 'Upcoming';
+        final statusColor = {
+          'Taken': Colors.green,
+          'Missed': Colors.red,
+          'Postponed': Colors.orange,
+          'Cancelled': Colors.red,
+          'Upcoming': Colors.blue,
+        }[status]!;
+        return Card(
+          margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+          child: ListTile(
+            title: Text(schedule.medicationName),
+            subtitle: Text(
+              'Time: ${DateFormat.jm().format(schedule.time)}, Days: ${schedule.days.join(', ')}\nStatus: $status',
+              style: TextStyle(color: statusColor),
+            ),
+            trailing: IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: () => Navigator.pushNamed(context, '/schedules/edit', arguments: schedule.id),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDayView(BuildContext context, WidgetRef ref, List<Schedule> schedules) {
+    final today = DateTime.now();
+    final todaySchedules = schedules.where((s) => s.days.contains(_weekdayToString(today.weekday))).toList();
+    return SingleChildScrollView(
+      child: DataTable(
+        columns: const [
+          DataColumn(label: Text('Medication')),
+          DataColumn(label: Text('Time')),
+          DataColumn(label: Text('Status')),
+        ],
+        rows: todaySchedules.map((schedule) {
+          return DataRow(
+            cells: [
+              DataCell(Text(schedule.medicationName)),
+              DataCell(Text(DateFormat.jm().format(schedule.time))),
+              DataCell(
+                FutureBuilder<String>(
+                  future: _getDoseStatus(schedule, ref),
+                  builder: (context, snapshot) {
+                    final status = snapshot.data ?? 'Upcoming';
+                    final statusColor = {
+                      'Taken': Colors.green,
+                      'Missed': Colors.red,
+                      'Postponed': Colors.orange,
+                      'Cancelled': Colors.red,
+                      'Upcoming': Colors.blue,
+                    }[status]!;
+                    return Text(status, style: TextStyle(color: statusColor));
+                  },
+                ),
+              ),
+            ],
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildWeekView(BuildContext context, WidgetRef ref, List<Schedule> schedules) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: DataTable(
+        columns: [
+          const DataColumn(label: Text('Medication')),
+          ...['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => DataColumn(label: Text(day))),
+        ],
+        rows: schedules.map((schedule) {
+          return DataRow(
+            cells: [
+              DataCell(Text(schedule.medicationName)),
+              ...['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(
+                (day) => DataCell(
+                  schedule.days.contains(day)
+                      ? FutureBuilder<String>(
+                          future: _getDoseStatus(schedule, ref),
+                          builder: (context, snapshot) {
+                            final status = snapshot.data ?? 'Upcoming';
+                            final statusColor = {
+                              'Taken': Colors.green,
+                              'Missed': Colors.red,
+                              'Postponed': Colors.orange,
+                              'Cancelled': Colors.red,
+                              'Upcoming': Colors.blue,
+                            }[status]!;
+                            return Text(DateFormat.jm().format(schedule.time), style: TextStyle(color: statusColor));
+                          },
+                        )
+                      : const Text('-'),
+                ),
+              ),
+            ],
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildMonthView(BuildContext context, WidgetRef ref, List<Schedule> schedules) {
+    return const Center(child: Text('Month view: TBD')); // Placeholder
+  }
+
+  String _weekdayToString(int weekday) {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return days[weekday - 1];
   }
 }
 
@@ -8707,6 +9199,109 @@ class ScheduleFormField extends StatelessWidget {
 
 // --- FILE BREAK ---
 
+// File: lib/services/dose_service.dart
+import 'package:drift/drift.dart' as drift;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:logging/logging.dart';
+import 'package:timezone/timezone.dart' as tz;
+import '../data/database.dart';
+import 'drift_service.dart'; // Added import
+import 'notification_service.dart';
+
+final doseServiceProvider = Provider<DoseService>((ref) => DoseService(ref));
+
+class DoseService {
+  final Ref _ref;
+  final Logger _logger = Logger('DoseService');
+
+  DoseService(this._ref);
+
+  AppDatabase get _db => _ref.read(driftServiceProvider);
+
+  Future<void> takeDose(int medicationId, int doseId, double amount) async {
+    await _db.transaction(() async {
+      _logger.info('Taking dose: medId=$medicationId, doseId=$doseId, amount=$amount');
+      final med = await (_db.select(_db.medications)..where((m) => m.id.equals(medicationId)))
+          .getSingleOrNull();
+      if (med == null || med.stockQuantity < amount) {
+        _logger.warning('Insufficient stock for medId=$medicationId, required=$amount, available=${med?.stockQuantity}');
+        throw Exception('Insufficient stock');
+      }
+      await _db.updateMedicationStock(medicationId, med.stockQuantity - amount);
+      await _db.addDoseHistory(DoseHistoryCompanion(
+        doseId: drift.Value(doseId),
+        takenAt: drift.Value(DateTime.now()),
+      ));
+      final schedules = await _db.getSchedules(medicationId);
+      final today = _weekdayToString(DateTime.now().weekday);
+      for (final schedule in schedules) {
+        if (schedule.doseId == doseId && schedule.frequency != 'Daily' && schedule.days.contains(today)) {
+          final updatedDays = schedule.days.where((day) => day != today).toList();
+          _logger.info('Updating schedule ${schedule.id} to remove $today: $updatedDays');
+          await _db.updateSchedule(
+              schedule.id, SchedulesCompanion(days: drift.Value(updatedDays)));
+        }
+      }
+    });
+  }
+
+  Future<void> snoozeDose(int scheduleId) async {
+    _logger.info('Snoozing dose: scheduleId=$scheduleId');
+    final schedule = await (_db.select(_db.schedules)..where((s) => s.id.equals(scheduleId)))
+        .getSingleOrNull();
+    if (schedule != null) {
+      final now = tz.TZDateTime.now(tz.local);
+      final newTime = now.add(const Duration(hours: 1));
+      await _db.updateSchedule(
+        scheduleId,
+        SchedulesCompanion(
+          time: drift.Value(DateTime(now.year, now.month, now.day, newTime.hour, newTime.minute)),
+        ),
+      );
+      if (schedule.notificationId != null) {
+        await _ref.read(notificationServiceProvider).scheduleNotification(
+          id: schedule.notificationId!,
+          title: 'Snoozed Dose: ${schedule.name}',
+          body: 'Time to take your dose!',
+          scheduledTime: DateTime(now.year, now.month, now.day, newTime.hour, newTime.minute),
+          days: schedule.days.isEmpty ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] : schedule.days,
+        );
+      }
+    }
+  }
+
+  Future<void> cancelDose(int scheduleId) async {
+    _logger.info('Canceling dose: scheduleId=$scheduleId');
+    final schedule = await (_db.select(_db.schedules)..where((s) => s.id.equals(scheduleId)))
+        .getSingleOrNull();
+    if (schedule != null) {
+      final today = _weekdayToString(DateTime.now().weekday);
+      final updatedDays = schedule.days.where((day) => day != today).toList();
+      await _db.updateSchedule(
+        scheduleId,
+        SchedulesCompanion(days: drift.Value(updatedDays)),
+      );
+    }
+  }
+
+  Future<bool> isDoseAvailableToday(Schedule schedule) async {
+    final today = DateTime.now();
+    final isToday = schedule.frequency == 'Daily' ||
+        schedule.days.contains(_weekdayToString(today.weekday));
+    final time = schedule.time;
+    final isBefore = today.hour < time.hour || (today.hour == time.hour && today.minute <= time.minute);
+    _logger.info('Dose availability for schedule ${schedule.id}: $isToday && $isBefore');
+    return isToday && isBefore;
+  }
+
+  String _weekdayToString(int weekday) {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return days[weekday - 1];
+  }
+}
+
+// --- FILE BREAK ---
+
 // File: lib/services/drift_service.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/database.dart';
@@ -8735,24 +9330,33 @@ import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
 final notificationServiceProvider = Provider<NotificationService>((ref) {
-  return NotificationService();
+  final service = NotificationService();
+  ref.onDispose(() => service.cancelAllNotifications());
+  return service..initialize();
 });
 
 class NotificationService {
-  final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
-  FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
   final Logger _logger = Logger('NotificationService');
+  late tz.Location _local;
 
-  Future<void> init() async {
+  Future<void> initialize() async {
+    _logger.info('Initializing notification service');
     tz.initializeTimeZones();
-    const initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const initializationSettingsIOS = DarwinInitializationSettings();
-    const initializationSettings = InitializationSettings(
-      android: initializationSettingsAndroid,
-      iOS: initializationSettingsIOS,
-    );
-    await _flutterLocalNotificationsPlugin.initialize(initializationSettings);
-    _logger.info('NotificationService initialized');
+    try {
+      _local = tz.getLocation('Australia/Sydney'); // Set to AEST
+      _logger.info('Timezone initialized: ${_local.name}');
+    } catch (e) {
+      _logger.severe('Failed to initialize timezone: $e');
+      rethrow;
+    }
+    const android = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const iOS = DarwinInitializationSettings();
+    const settings = InitializationSettings(android: android, iOS: iOS);
+    await _flutterLocalNotificationsPlugin.initialize(settings);
+    final androidPlugin = _flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    await androidPlugin?.requestNotificationsPermission();
   }
 
   Future<void> scheduleNotification({
@@ -8762,38 +9366,57 @@ class NotificationService {
     required DateTime scheduledTime,
     required List<String> days,
   }) async {
-    final now = tz.TZDateTime.now(tz.local);
-    for (final day in days) {
-      final dayIndex = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].indexOf(day);
-      if (dayIndex == -1) continue;
-      final nextDay = now.add(Duration(days: (dayIndex - now.weekday + 7) % 7));
-      final scheduled = tz.TZDateTime(
-        tz.local,
-        nextDay.year,
-        nextDay.month,
-        nextDay.day,
-        scheduledTime.hour,
-        scheduledTime.minute,
-      );
-      await _flutterLocalNotificationsPlugin.zonedSchedule(
-        id.hashCode,
-        title,
-        body,
-        scheduled,
-        const NotificationDetails(
-          android: AndroidNotificationDetails('medminder', 'MedMinder Notifications'),
-          iOS: DarwinNotificationDetails(),
-        ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
-      );
-      _logger.info('Scheduled notification: $id for $scheduled');
+    try {
+      final now = tz.TZDateTime.now(_local);
+      for (final day in days) {
+        final dayIndex = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].indexOf(day);
+        if (dayIndex == -1) {
+          _logger.warning('Invalid day: $day');
+          continue;
+        }
+        final nextDay = now.add(Duration(days: (dayIndex - now.weekday + 7) % 7));
+        final scheduled = tz.TZDateTime(
+          _local,
+          nextDay.year,
+          nextDay.month,
+          nextDay.day,
+          scheduledTime.hour,
+          scheduledTime.minute,
+        );
+        _logger.fine('Scheduling notification: ID=$id, Title=$title, Time=$scheduled, Days=$days');
+        await _flutterLocalNotificationsPlugin.zonedSchedule(
+          id.hashCode,
+          title,
+          body,
+          scheduled,
+          const NotificationDetails(
+            android: AndroidNotificationDetails(
+              'medminder',
+              'MedMinder Notifications',
+              importance: Importance.max,
+              priority: Priority.high,
+            ),
+            iOS: DarwinNotificationDetails(),
+          ),
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+        );
+        _logger.info('Successfully scheduled notification: ID=$id, Title=$title, Time=$scheduled, Days=$days');
+      }
+    } catch (e) {
+      _logger.severe('Failed to schedule notification: ID=$id, Error=$e');
+      rethrow;
     }
   }
 
   Future<void> cancelNotification(String id) async {
     await _flutterLocalNotificationsPlugin.cancel(id.hashCode);
     _logger.info('Cancelled notification: $id');
+  }
+
+  Future<void> cancelAllNotifications() async {
+    await _flutterLocalNotificationsPlugin.cancelAll();
+    _logger.info('Cancelled all notifications');
   }
 }
 
@@ -9030,7 +9653,7 @@ import 'common/theme/app_theme.dart';
 import 'features/home/home_screen.dart';
 import 'features/medication/screens/medication_info_screen.dart';
 import 'features/medication/screens/medication_add_screen.dart';
-import 'features/medication/screens/medication_edit_screen.dart';
+import 'features/medication/screens/medication_overview_screen.dart';
 import 'features/dose/screens/dose_info_screen.dart';
 import 'features/dose/screens/dose_add_screen.dart';
 import 'features/dose/screens/dose_edit_screen.dart';
@@ -9043,7 +9666,7 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await NotificationService().init();
+  await NotificationService().initialize();
   runApp(const ProviderScope(child: MyApp()));
 }
 
@@ -9060,19 +9683,15 @@ class MyApp extends StatelessWidget {
       routes: {
         '/medications/info': (context) => const MedicationsInfoScreen(),
         '/medications/add': (context) => const MedicationsAddScreen(),
-        '/medications/edit': (context) => MedicationsEditScreen(
-          medicationId: ModalRoute.of(context)!.settings.arguments as int,
-        ),
+        '/medications/edit': (context) =>
+            MedicationOverviewScreen(medicationId: ModalRoute.of(context)!.settings.arguments as int),
         '/doses/info': (context) => const DosesInfoScreen(),
         '/doses/add': (context) => const DosesAddScreen(),
-        '/doses/edit': (context) => DosesEditScreen(
-          doseId: ModalRoute.of(context)!.settings.arguments as int,
-        ),
+        '/doses/edit': (context) => DosesEditScreen(doseId: ModalRoute.of(context)!.settings.arguments as int),
         '/schedules/info': (context) => const SchedulesInfoScreen(),
         '/schedules/add': (context) => const SchedulesAddScreen(),
-        '/schedules/edit': (context) => SchedulesEditScreen(
-          scheduleId: ModalRoute.of(context)!.settings.arguments as int,
-        ),
+        '/schedules/edit': (context) =>
+            SchedulesEditScreen(scheduleId: ModalRoute.of(context)!.settings.arguments as int),
       },
     );
   }
@@ -9088,12 +9707,7 @@ class MainScaffold extends StatefulWidget {
 class _MainScaffoldState extends State<MainScaffold> {
   int _selectedIndex = 0;
 
-  static const List<Widget> _screens = [
-    HomeScreen(),
-    MedicationsInfoScreen(),
-    DosesInfoScreen(),
-    SchedulesInfoScreen(),
-  ];
+  static const List<Widget> _screens = [HomeScreen(), MedicationsInfoScreen(), SchedulesInfoScreen()];
 
   void _onItemTapped(int index) {
     setState(() {
@@ -9109,7 +9723,6 @@ class _MainScaffoldState extends State<MainScaffold> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.medication), label: 'Medications'),
-          BottomNavigationBarItem(icon: Icon(Icons.schedule), label: 'Doses'),
           BottomNavigationBarItem(icon: Icon(Icons.calendar_today), label: 'Schedules'),
         ],
         currentIndex: _selectedIndex,
@@ -9253,6 +9866,7 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    implementation ("androidx.core:core:1.13.1")
 }
 
 // --- FILE BREAK ---
@@ -9525,6 +10139,15 @@ The `common/medication_matrix.dart` file is the cornerstone of MedMinder2â€�
     - Refactored `MedicationScreen` and `DoseForm` with modular widgets, constants, and optimized code.
     - Refactored `ScheduleScreen` with `ScheduleFormField`, `ScheduleFormCard`, and constants.
     - Proposed folder structure cleanup for feature-based organization.
+- Update: Fixed doseTextName typo in SchedulesAddScreen to resolve compilation error.
+- Update: Fixed navbar inactive buttons, added MedicationOverviewScreen, and enhanced SchedulesInfoScreen with table views.
+- Update: Added medicationId to DosesAddScreen for pre-selection in MedicationOverviewScreen.
+- Update: Fixed amount getter error in DosesAddScreen by using _amountController.text.
+- Update: Fixed syntax error in SchedulesInfoScreen and added getDoseHistory to AppDatabase.
+- Update: Lightened navbar, added dose deletion, enhanced schedule alerts, fixed view statuses, and improved notification logging.
+- Update: Fixed app_theme.dart constant error using Color(0xFF9E9E9E) for navbar inactive buttons.
+- Update: Fixed LateInitializationError in notifications, lightened navbar, corrected Week view status, and enhanced schedule pre-selection.
+- Update: Fixed initializeTimeZones error, added _weekdayToIndex, lightened navbar, and verified pre-selection.
 
 ## Project Structure
 - **Flutter Code** (`lib/`):
