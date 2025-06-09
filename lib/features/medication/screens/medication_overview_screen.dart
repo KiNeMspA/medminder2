@@ -101,15 +101,37 @@ class MedicationOverviewScreen extends ConsumerWidget {
                   loading: () => const CircularProgressIndicator(),
                   error: (e, _) => Text('Error: $e'),
                 ),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add Dose'),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => DosesAddScreen(medicationId: medicationId)),
+                  ).then((_) => ref.invalidate(allDosesProvider)),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.calendar_today),
+                  label: const Text('Add Schedule'),
+                  onPressed: () async {
+                    final doses = await ref.read(driftServiceProvider).getDoses(medicationId);
+                    if (doses.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Please add a dose first')),
+                      );
+                      return;
+                    }
+                    Navigator.pushNamed(context, '/schedules/add', arguments: medicationId);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
+                ),
               ],
             ),
-          ),
-          floatingActionButton: FloatingActionButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => DosesAddScreen(medicationId: medicationId)),
-            ).then((_) => ref.invalidate(allDosesProvider)),
-            child: const Icon(Icons.add),
           ),
         );
       },

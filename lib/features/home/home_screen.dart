@@ -11,6 +11,45 @@ class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
+  void _showDoseDialog(BuildContext context, WidgetRef ref, Schedule schedule) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Dose: ${schedule.medicationName}'),
+        content: Text('Time: ${DateFormat.jm().format(schedule.time)}'),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await ref.read(doseServiceProvider).takeDose(
+                schedule.medicationId,
+                schedule.doseId!,
+                1.0,
+              );
+              ref.invalidate(schedulesProvider);
+              Navigator.pop(context);
+            },
+            child: const Text('Take', style: TextStyle(color: Colors.green)),
+          ),
+          TextButton(
+            onPressed: () async {
+              await ref.read(doseServiceProvider).snoozeDose(schedule.id);
+              ref.invalidate(schedulesProvider);
+              Navigator.pop(context);
+            },
+            child: const Text('Snooze', style: TextStyle(color: Colors.orange)),
+          ),
+          TextButton(
+            onPressed: () async {
+              await ref.read(doseServiceProvider).cancelDose(schedule.id);
+              ref.invalidate(schedulesProvider);
+              Navigator.pop(context);
+            },
+            child: const Text('Cancel', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
   Widget build(BuildContext context, WidgetRef ref) {
     final medicationsAsync = ref.watch(medicationsProvider);
     final dosesAsync = ref.watch(allDosesProvider);
@@ -65,31 +104,9 @@ class HomeScreen extends ConsumerWidget {
                           subtitle: Text(
                             'Time: ${DateFormat.jm().format(schedule.time)}, Days: ${schedule.days.join(', ')}',
                           ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.check),
-                                onPressed: schedule.doseId != null
-                                    ? () async {
-                                  await ref.read(doseServiceProvider).takeDose(
-                                    schedule.medicationId,
-                                    schedule.doseId!,
-                                    1.0, // Adjust amount as needed
-                                  );
-                                  ref.invalidate(schedulesProvider);
-                                }
-                                    : null,
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.snooze),
-                                onPressed: () async {
-                                  await ref.read(doseServiceProvider).snoozeDose(schedule.id);
-                                  ref.invalidate(schedulesProvider);
-                                },
-                              ),
-                            ],
-                          ),
+                          onTap: schedule.doseId != null
+                              ? () => _showDoseDialog(context, ref, schedule)
+                              : null,
                         ),
                       );
                     }).toList(),

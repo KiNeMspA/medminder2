@@ -149,6 +149,10 @@ class AppDatabase extends _$AppDatabase {
     return doseId;
   }
 
+  Future<List<DoseHistory>> getDoseHistory(int doseId) async {
+    return (select(doseHistory)..where((tbl) => tbl.doseId.equals(doseId))).get();
+  }
+
   Future<void> updateDose(int id, DosesCompanion dose) async {
     _logger.info('Updating dose: id=$id, $dose');
     await (update(doses)..where((t) => t.id.equals(id))).write(dose);

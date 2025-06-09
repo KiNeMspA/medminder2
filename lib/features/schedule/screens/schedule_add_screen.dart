@@ -8,7 +8,9 @@ import '../../../services/notification_service.dart';
 import '../../medication/constants/medication_form_constants.dart';
 
 class SchedulesAddScreen extends ConsumerStatefulWidget {
-  const SchedulesAddScreen({super.key});
+  final int? medicationId;
+
+  const SchedulesAddScreen({super.key, this.medicationId});
 
   @override
   ConsumerState<SchedulesAddScreen> createState() => _SchedulesAddScreenState();
@@ -33,6 +35,16 @@ class _SchedulesAddScreenState extends ConsumerState<SchedulesAddScreen> {
     super.initState();
     _loadMedications();
     _nameController.addListener(() => setState(() {}));
+
+    if (widget.medicationId != null) {
+      _selectedMedicationId = widget.medicationId;
+      _loadMedications().then((_) {
+        final med = _medications.firstWhere((m) => m.id == widget.medicationId);
+        setState(() {
+          _selectedMedicationName = med.name;
+        });
+      });
+    }
   }
 
   @override
@@ -61,31 +73,23 @@ class _SchedulesAddScreenState extends ConsumerState<SchedulesAddScreen> {
 
   String get _summary {
     if (_selectedMedicationName == null || _selectedDays.isEmpty) return '';
-    final doseText = _selectedDoseId != null
-        ? 'Dose ID: $_selectedDoseId, '
-        : '';
+    final doseText = _selectedDoseId != null ? 'Dose ID: $_selectedDoseId, ' : '';
     return 'Schedule: $_selectedMedicationName at ${_selectedTime.format(context)} on ${_selectedDays.join(', ')}\n$doseText: ${_nameController.text.isEmpty ? 'Unnamed' : _nameController.text}';
   }
 
   void _saveSchedule() async {
     if (!_formKey.currentState!.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please complete all required fields')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please complete all required fields')));
       return;
     }
 
     if (_selectedMedicationId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a medication')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a medication')));
       return;
     }
 
     if (_selectedDays.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select at least one day')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select at least one day')));
       return;
     }
 
@@ -106,25 +110,23 @@ class _SchedulesAddScreenState extends ConsumerState<SchedulesAddScreen> {
       _logger.info('Saving schedule: $schedule');
       final scheduleId = await ref.read(driftServiceProvider).addSchedule(schedule);
       if (_notificationsEnabled) {
-        await ref.read(notificationServiceProvider).scheduleNotification(
-          id: notificationId,
-          title: 'MedMinder: $_selectedMedicationName',
-          body: 'Time for your dose!',
-          scheduledTime: DateTime.now().copyWith(hour: _selectedTime.hour, minute: _selectedTime.minute),
-          days: _selectedDays,
-        );
+        await ref
+            .read(notificationServiceProvider)
+            .scheduleNotification(
+              id: notificationId,
+              title: 'MedMinder: $_selectedMedicationName',
+              body: 'Time for your dose!',
+              scheduledTime: DateTime.now().copyWith(hour: _selectedTime.hour, minute: _selectedTime.minute),
+              days: _selectedDays,
+            );
         _logger.info('Scheduled notification for schedule ID: $scheduleId');
       }
       ref.invalidate(schedulesProvider);
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Schedule added')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Schedule added')));
     } catch (e, stack) {
       _logger.severe('Error adding schedule: $e\n$stack');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error adding schedule: $e')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error adding schedule: $e')));
     }
   }
 
@@ -169,24 +171,20 @@ class _SchedulesAddScreenState extends ConsumerState<SchedulesAddScreen> {
             DropdownButtonFormField<int>(
               value: _selectedDoseId,
               items: [
-                const DropdownMenuItem<int>(
-                  value: null,
-                  child: Text('None'),
+                const DropdownMenuItem<int>(value: null, child: Text('None')),
+                ..._doses.map(
+                  (dose) => DropdownMenuItem<int>(
+                    value: dose.id,
+                    child: Text('${dose.amount} ${dose.unit} (${dose.name ?? 'Unnamed'})'),
+                  ),
                 ),
-                ..._doses.map((dose) => DropdownMenuItem<int>(
-                  value: dose.id,
-                  child: Text('${dose.amount} ${dose.unit} (${dose.name ?? 'Unnamed'})'),
-                )),
               ],
               onChanged: (value) {
                 setState(() {
                   _selectedDoseId = value;
                 });
               },
-              decoration: const InputDecoration(
-                labelText: 'Dose',
-                border: OutlineInputBorder(),
-              ),
+              decoration: const InputDecoration(labelText: 'Dose', border: OutlineInputBorder()),
             ),
           ],
         ),
@@ -210,10 +208,7 @@ class _SchedulesAddScreenState extends ConsumerState<SchedulesAddScreen> {
         title: const Text('Schedule Time'),
         content: ElevatedButton(
           onPressed: () async {
-            final time = await showTimePicker(
-              context: context,
-              initialTime: _selectedTime,
-            );
+            final time = await showTimePicker(context: context, initialTime: _selectedTime);
             if (time != null) {
               setState(() {
                 _selectedTime = time;
@@ -281,10 +276,7 @@ class _SchedulesAddScreenState extends ConsumerState<SchedulesAddScreen> {
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [
-                Theme.of(context).colorScheme.primary,
-                Theme.of(context).colorScheme.primary.withOpacity(0.8),
-              ],
+              colors: [Theme.of(context).colorScheme.primary, Theme.of(context).colorScheme.primary.withOpacity(0.8)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -313,15 +305,15 @@ class _SchedulesAddScreenState extends ConsumerState<SchedulesAddScreen> {
                     currentStep: _currentStep,
                     onStepContinue: () {
                       if (_currentStep == 0 && _selectedMedicationId == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Please select a medication')),
-                        );
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(const SnackBar(content: Text('Please select a medication')));
                         return;
                       }
                       if (_currentStep == 4 && _selectedDays.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Please select at least one day')),
-                        );
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(const SnackBar(content: Text('Please select at least one day')));
                         return;
                       }
                       if (_currentStep < _buildSteps().length - 1) {
@@ -343,10 +335,7 @@ class _SchedulesAddScreenState extends ConsumerState<SchedulesAddScreen> {
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
                             if (details.onStepCancel != null)
-                              TextButton(
-                                onPressed: details.onStepCancel,
-                                child: const Text('Back'),
-                              ),
+                              TextButton(onPressed: details.onStepCancel, child: const Text('Back')),
                             const SizedBox(width: 8),
                             ElevatedButton(
                               onPressed: details.onStepContinue,

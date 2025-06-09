@@ -13,16 +13,14 @@ class NotificationService {
   FlutterLocalNotificationsPlugin();
   final Logger _logger = Logger('NotificationService');
 
-  Future<void> init() async {
-    tz.initializeTimeZones();
-    const initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const initializationSettingsIOS = DarwinInitializationSettings();
-    const initializationSettings = InitializationSettings(
-      android: initializationSettingsAndroid,
-      iOS: initializationSettingsIOS,
-    );
-    await _flutterLocalNotificationsPlugin.initialize(initializationSettings);
-    _logger.info('NotificationService initialized');
+  Future<void> initialize() async {
+    _logger.info('Initializing notification service');
+    const android = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const iOS = DarwinInitializationSettings();
+    const settings = InitializationSettings(android: android, iOS: iOS);
+    await _flutterLocalNotificationsPlugin.initialize(settings);
+    final androidPlugin = _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    await androidPlugin?.requestNotificationsPermission();
   }
 
   Future<void> scheduleNotification({
