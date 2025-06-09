@@ -82,50 +82,48 @@ class _SchedulesInfoScreenState extends ConsumerState<SchedulesInfoScreen> {
     }
   }
 
-  Widget _buildScheduleRow(BuildContext context, WidgetRef ref, Schedule schedule) {
-    Future<String> _getDoseStatus(Schedule schedule, WidgetRef ref) async {
-      final now = DateTime.now();
-      final gracePeriod = const Duration(hours: 1); // TODO: Make editable in settings
-      final scheduleTimeToday = DateTime(now.year, now.month, now.day, schedule.time.hour, schedule.time.minute);
-      final isToday = schedule.frequency == 'Daily' || schedule.days.contains(_weekdayToString(now.weekday));
-      if (!isToday) return 'Upcoming';
-      if (scheduleTimeToday.add(gracePeriod).isAfter(now)) return 'Upcoming';
-      // Placeholder: Check DoseHistory for Taken status
-      final history = await ref.read(driftServiceProvider).getDoseHistory(schedule.doseId ?? -1);
-      if (history.any((h) => h.takenAt.isAfter(scheduleTimeToday.subtract(const Duration(minutes: 1))))) {
-        return 'Taken';
-      }
-// Placeholder: Check for Postponed/Cancelled
-      return 'Missed';// Temporarily disable getDoseHistory call
+  Future<String> _getDoseStatus(Schedule schedule, WidgetRef ref) async {
+    final now = DateTime.now();
+    final gracePeriod = const Duration(hours: 1); // TODO: Make editable in settings
+    final scheduleTimeToday = DateTime(now.year, now.month, now.day, schedule.time.hour, schedule.time.minute);
+    final isToday = schedule.frequency == 'Daily' || schedule.days.contains(_weekdayToString(now.weekday));
+    if (!isToday) return 'Upcoming';
+    if (scheduleTimeToday.add(gracePeriod).isAfter(now)) return 'Upcoming';
+    final history = await ref.read(driftServiceProvider).getDoseHistory(schedule.doseId ?? -1);
+    if (history.any((h) => h.takenAt.isAfter(scheduleTimeToday.subtract(const Duration(minutes: 1))))) {
+      return 'Taken';
     }
+    // Placeholder: Check for Postponed/Cancelled
+    return 'Missed';
+  }
 
+  Widget _buildScheduleRow(BuildContext context, WidgetRef ref, Schedule schedule) {
     return FutureBuilder<String>(
-      future: _getDoseStatus(schedule, ref),
-      builder: (context, snapshot) {
-        final status = snapshot.data ?? 'Upcoming';
-        final statusColor = {
-          'Taken': Colors.green,
-          'Missed': Colors.red,
-          'Postponed': Colors.orange,
-          'Cancelled': Colors.red,
-          'Upcoming': Colors.blue,
-        }[status]!;
-        return Card(
-          margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
-          child: ListTile(
-            title: Text(schedule.medicationName),
-            subtitle: Text(
-              'Time: ${DateFormat.jm().format(schedule.time)}, Days: ${schedule.days.join(', ')}\nStatus: $status',
-              style: TextStyle(color: statusColor),
+        future: _getDoseStatus(schedule, ref),
+        builder: (context, snapshot) {
+          final status = snapshot.data ?? 'Upcoming';
+          final statusColor = {
+            'Taken': Colors.green,
+            'Missed': Colors.red,
+            'Postponed': Colors.orange,
+            'Cancelled': Colors.red,
+            'Upcoming': Colors.blue,
+          }[status]!;
+          return Card(
+            margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+            child: ListTile(
+              title: Text(schedule.medicationName),
+              subtitle: Text(
+                'Time: ${DateFormat.jm().format(schedule.time)}, Days: ${schedule.days.join(', ')}\nStatus: $status',
+                style: TextStyle(color: statusColor),
+              ),
+              trailing: IconButton(
+                icon: const Icon(Icons.edit),
+                onPressed: () => Navigator.pushNamed(context, '/schedules/edit', arguments: schedule.id),
+              ),
             ),
-            trailing: IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: () => Navigator.pushNamed(context, '/schedules/edit', arguments: schedule.id),
-            ),
-          ),
-        );
-      },
-    );
+          );
+        });
   }
 
   Widget _buildDayView(BuildContext context, WidgetRef ref, List<Schedule> schedules) {

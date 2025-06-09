@@ -49,7 +49,7 @@ final appTheme = ThemeData(
   bottomNavigationBarTheme: const BottomNavigationBarThemeData(
     backgroundColor: Colors.white,
     selectedItemColor: Colors.blue,
-    unselectedItemColor: Colors.grey[500], // Explicit dark gray
+    unselectedItemColor: const Color(0xFF9E9E9E), // Explicit dark gray
     selectedLabelStyle: TextStyle(fontWeight: FontWeight.bold),
     unselectedLabelStyle: TextStyle(fontWeight: FontWeight.normal),
     type: BottomNavigationBarType.fixed, // Ensure consistent rendering
