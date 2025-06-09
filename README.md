@@ -62,6 +62,7 @@ The `common/medication_matrix.dart` file is the cornerstone of MedMinder2’s lo
     - Refactored `MedicationScreen` and `DoseForm` with modular widgets, constants, and optimized code.
     - Refactored `ScheduleScreen` with `ScheduleFormField`, `ScheduleFormCard`, and constants.
     - Proposed folder structure cleanup for feature-based organization.
+- Update: Fixed doseTextName typo in SchedulesAddScreen to resolve compilation error.
 
 ## Project Structure
 - **Flutter Code** (`lib/`):

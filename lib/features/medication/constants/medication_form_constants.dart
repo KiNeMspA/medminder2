@@ -11,9 +11,6 @@ class MedicationFormConstants {
   static const String concentrationLabel = 'Concentration';
   static const String quantityLabel = 'Quantity';
   static const String unitsLabel = 'units';
-  static const String nameHelper = 'Enter the name of the Medication';
-  static const String concentrationHelper = 'Enter the Concentration';
-  static const String quantityHelper = 'Enter the Amount';
   static const String nameRequiredMessage = 'Medication Name is required';
   static const String concentrationRequiredMessage = 'Concentration is required';
   static const String quantityRequiredMessage = 'Quantity is required';
@@ -29,12 +26,19 @@ class MedicationFormConstants {
   static const String proceedButton = 'Proceed';
   static const String continueButton = 'Continue';
   static const String saveButton = 'Save Medication';
-  static const List<String> medicationTypes = ['Tablet', 'Injection'];
+  static const List<String> medicationTypes = ['Tablet', 'Capsule', 'Injection', 'Drops'];
+  static const String powderAmountLabel = 'Powder Amount';
+  static const String solventVolumeLabel = 'Solvent Volume';
+  static const String volumeLabel = 'Volume';
+  static const String dropsQuantityLabel = 'Total Drops';
+  static const String reconstitutionRequiredMessage = 'Reconstitution fields required';
+  static const String volumeRequiredMessage = 'Volume is required';
+
 
   static String errorSavingMessage(Object error) => 'Error: $error';
 
   // Paddings and Spacings
-  static const EdgeInsets formPadding = EdgeInsets.zero; // No padding
+  static const EdgeInsets formPadding = EdgeInsets.zero;
   static const EdgeInsets cardPadding = EdgeInsets.all(8.0);
   static const double sectionSpacing = 16.0;
   static const double fieldSpacing = 16.0;
@@ -55,14 +59,13 @@ class MedicationFormConstants {
   );
 
   // Decorations
-  static InputDecoration textFieldDecoration(String label, String? helperText) => InputDecoration(
+  static InputDecoration textFieldDecoration(String label) => InputDecoration(
     labelText: label,
     border: const OutlineInputBorder(
       borderRadius: BorderRadius.all(Radius.circular(12)),
     ),
     filled: true,
     fillColor: Colors.grey[100],
-    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
   );
 
   static InputDecoration get dropdownDecoration => InputDecoration(

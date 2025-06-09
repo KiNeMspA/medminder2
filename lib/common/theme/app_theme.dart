@@ -1,4 +1,3 @@
-// lib/common/theme/app_theme.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -24,7 +23,7 @@ final appTheme = ThemeData(
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     color: Colors.white.withOpacity(0.9),
     shadowColor: Colors.black26,
-    margin: EdgeInsets.zero, // Explicitly remove margins
+    margin: EdgeInsets.zero,
   ),
   textTheme: TextTheme(
     displayLarge: GoogleFonts.poppins(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.black87),
@@ -45,6 +44,13 @@ final appTheme = ThemeData(
     ),
     labelStyle: GoogleFonts.poppins(color: Colors.black54),
     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+  ),
+  bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+    backgroundColor: Colors.white,
+    selectedItemColor: Colors.blue,
+    unselectedItemColor: Colors.grey, // Changed to higher contrast
+    selectedLabelStyle: TextStyle(fontWeight: FontWeight.bold),
+    unselectedLabelStyle: TextStyle(fontWeight: FontWeight.normal),
   ),
   elevatedButtonTheme: ElevatedButtonThemeData(
     style: ElevatedButton.styleFrom(

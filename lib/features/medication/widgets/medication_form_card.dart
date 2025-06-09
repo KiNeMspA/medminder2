@@ -1,6 +1,5 @@
-// lib/features/medication/widgets/medication_form_card.dart
 import 'package:flutter/material.dart';
-import '../constants/medication_form_constants.dart';
+import '../../../common/form_styles.dart';
 
 class MedicationFormCard extends StatelessWidget {
   final Widget child;
@@ -9,16 +8,14 @@ class MedicationFormCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity, // Ensure full width
-      child: Card(
-        elevation: MedicationFormConstants.cardElevation,
-        shape: MedicationFormConstants.cardShape,
-        margin: EdgeInsets.zero, // No margins
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: child,
-        ),
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      margin: EdgeInsets.zero, // Remove margins for full width
+      child: Container(
+        width: FormStyles.fullWidthField, // Use full-width constant
+        padding: const EdgeInsets.all(16.0),
+        child: child,
       ),
     );
   }

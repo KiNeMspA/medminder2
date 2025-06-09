@@ -26,20 +26,26 @@ class Medications extends Table {
 class Doses extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get medicationId => integer().references(Medications, #id)();
+  TextColumn get medicationName => text()();
   RealColumn get amount => real()();
   TextColumn get unit => text()();
+  DateTimeColumn get time => dateTime()();
+  BoolColumn get taken => boolean().withDefault(const Constant(false))();
   RealColumn get weight => real().withDefault(const Constant(0.0))();
   TextColumn get name => text().nullable()();
 }
 
 class Schedules extends Table {
   IntColumn get id => integer().autoIncrement()();
+  IntColumn get medicationId => integer().references(Medications, #id)();
+  TextColumn get medicationName => text()();
   IntColumn get doseId => integer().nullable().references(Doses, #id)();
   TextColumn get frequency => text()();
   TextColumn get days => text().map(const StringListConverter())();
   DateTimeColumn get time => dateTime()();
   TextColumn get name => text().withDefault(const Constant(''))();
-  TextColumn get notificationId => text().nullable()(); // Corrected column
+  BoolColumn get notificationsEnabled => boolean().withDefault(const Constant(true))();
+  TextColumn get notificationId => text().nullable()();
 }
 
 class DoseHistory extends Table {
@@ -55,12 +61,21 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 8; // Incremented
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onUpgrade: (Migrator m, int from, int to) async {
       _logger.info('Upgrading database from schema version $from to $to');
+      if (from < 9) {
+        await m.addColumn(doses, doses.medicationName);
+        await m.addColumn(doses, doses.time);
+        await m.addColumn(doses, doses.taken);
+        await m.addColumn(schedules, schedules.medicationId);
+        await m.addColumn(schedules, schedules.medicationName);
+        await m.addColumn(schedules, schedules.notificationsEnabled);
+        _logger.info('Added new columns for Doses and Schedules');
+      }
       if (from <= 7) {
         await m.addColumn(schedules, schedules.notificationId);
         _logger.info('Added notificationId column to Schedules table');
@@ -99,6 +114,15 @@ class AppDatabase extends _$AppDatabase {
     await into(medications).insert(med);
   }
 
+  Future<void> updateMedication(MedicationsCompanion med) async {
+    _logger.info('Updating medication: $med');
+    await (update(medications)..where((m) => m.id.equals(med.id.value))).write(med);
+  }
+
+  Future<Medication?> getMedicationById(int id) async {
+    return await (select(medications)..where((m) => m.id.equals(id))).getSingleOrNull();
+  }
+
   Future<void> updateMedicationStock(int id, double newQuantity) async {
     _logger.info('Updating medication stock: id=$id, newQuantity=$newQuantity');
     await (update(medications)..where((m) => m.id.equals(id))).write(
@@ -131,6 +155,26 @@ class AppDatabase extends _$AppDatabase {
     await _logDatabase();
   }
 
+  Future<void> markDoseTaken(int id) async {
+    _logger.info('Marking dose as taken: id=$id');
+    await (update(doses)..where((t) => t.id.equals(id))).write(
+      DosesCompanion(taken: const Value(true)),
+    );
+    await addDoseHistory(DoseHistoryCompanion(
+      doseId: Value(id),
+      takenAt: Value(DateTime.now()),
+    ));
+  }
+
+  Future<void> skipDose(int id) async {
+    _logger.info('Skipping dose: id=$id');
+    await (delete(doses)..where((t) => t.id.equals(id))).go();
+  }
+
+  Future<Dose?> getDoseById(int id) async {
+    return await (select(doses)..where((d) => d.id.equals(id))).getSingleOrNull();
+  }
+
   Future<List<Dose>> getDoses(int medicationId) async {
     final doseList = await (select(doses)..where((d) => d.medicationId.equals(medicationId))).get();
     _logger.info('Doses fetched for medicationId=$medicationId: $doseList');
@@ -157,20 +201,26 @@ class AppDatabase extends _$AppDatabase {
     return scheduleId;
   }
 
-  Future<List<Schedule>> getSchedules(int medicationId) async {
-    final doseList = await getDoses(medicationId);
-    final doseIds = doseList.map((d) => d.id).toList();
-    final scheduleList = await (select(schedules)
-      ..where((s) => s.doseId.isIn(doseIds) | s.doseId.isNull()))
-        .get();
-    _logger.info('Schedules fetched for medicationId=$medicationId: $scheduleList');
-    return scheduleList;
-  }
-
   Future<void> updateSchedule(int id, SchedulesCompanion schedule) async {
     _logger.info('Updating schedule: id=$id, $schedule');
     await (update(schedules)..where((s) => s.id.equals(id))).write(schedule);
     await _logDatabase();
+  }
+
+  Future<Schedule?> getScheduleById(int id) async {
+    return await (select(schedules)..where((s) => s.id.equals(id))).getSingleOrNull();
+  }
+
+  Future<List<Schedule>> getSchedules(int medicationId) async {
+    final scheduleList = await (select(schedules)..where((s) => s.medicationId.equals(medicationId))).get();
+    _logger.info('Schedules fetched for medicationId=$medicationId: $scheduleList');
+    return scheduleList;
+  }
+
+  Future<List<Schedule>> getAllSchedules() async {
+    final scheduleList = await select(schedules).get();
+    _logger.info('All schedules fetched: $scheduleList');
+    return scheduleList;
   }
 
   Future<void> deleteSchedule(int id) async {

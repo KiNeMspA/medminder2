@@ -1,66 +1,72 @@
-// lib/features/medication/widgets/medication_form_field.dart
 import 'package:flutter/material.dart';
+import '../../../common/form_styles.dart';
+import '../../../common/utils/formatters.dart';
 import 'medication_form_card.dart';
-import '../constants/medication_form_constants.dart';
 
 class MedicationFormField extends StatelessWidget {
   final TextEditingController controller;
   final String label;
-  final String? helperText;
+  final String helperText;
   final int? helperMaxLines;
-  final TextInputType? keyboardType;
   final String? Function(String?)? validator;
+  final TextInputType? keyboardType;
   final Widget? suffix;
-  final double? maxWidth;
+  final double maxWidth;
 
   const MedicationFormField({
     super.key,
     required this.controller,
     required this.label,
-    this.helperText,
+    required this.helperText,
     this.helperMaxLines,
-    this.keyboardType,
     this.validator,
+    this.keyboardType,
     this.suffix,
-    this.maxWidth,
+    required this.maxWidth,
   });
 
   @override
   Widget build(BuildContext context) {
-    return MedicationFormCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: maxWidth ?? double.infinity),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: controller,
-                    decoration: MedicationFormConstants.textFieldDecoration(label, null).copyWith(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: maxWidth),
+                child: TextFormField(
+                  controller: controller,
+                  decoration: InputDecoration(
+                    labelText: label,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    keyboardType: keyboardType,
-                    validator: validator,
+                    suffixIcon: suffix,
                   ),
+                  keyboardType: keyboardType,
+                  validator: validator,
+                  inputFormatters: keyboardType == const TextInputType.numberWithOptions(decimal: true)
+                      ? [DecimalTextInputFormatter()]
+                      : null,
                 ),
-                if (suffix != null) suffix!,
-              ],
-            ),
-          ),
-          if (helperText != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 4, left: 16),
-              child: Text(
-                helperText!,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
-                maxLines: helperMaxLines ?? 2,
-                overflow: TextOverflow.visible,
               ),
             ),
-        ],
-      ),
+          ],
+        ),
+        if (helperText.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(left: 16.0, top: 4.0),
+            child: Text(
+              helperText,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              maxLines: helperMaxLines ?? 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+      ],
     );
   }
 }

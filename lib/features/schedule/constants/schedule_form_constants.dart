@@ -70,7 +70,7 @@ class ScheduleFormConstants {
 
   static InputDecoration dropdownDecoration(String label) => InputDecoration(
     labelText: label,
-    helperText: label == doseSelectLabel ? 'Choose a dose to assign to this schedule (optional)' : null,
+    helperText: label.contains('Dose') ? 'Choose a dose for this schedule (required)' : null,
     border: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
     filled: true,
     fillColor: Colors.grey[100],

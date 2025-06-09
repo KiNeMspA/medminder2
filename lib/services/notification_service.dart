@@ -1,150 +1,68 @@
-// lib/services/notification_service.dart
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/timezone.dart' as tz;
-import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
+import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
+
+final notificationServiceProvider = Provider<NotificationService>((ref) {
+  return NotificationService();
+});
 
 class NotificationService {
-  final _notifications = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
+  FlutterLocalNotificationsPlugin();
   final Logger _logger = Logger('NotificationService');
 
   Future<void> init() async {
-    _logger.info('Initializing notification service');
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const settings = InitializationSettings(android: androidSettings);
-
-    const channel = AndroidNotificationChannel(
-      'medication_channel',
-      'Medication Reminders',
-      description: 'Notifications for medication reminders',
-      importance: Importance.high,
-      playSound: true,
-      enableVibration: true,
+    tz.initializeTimeZones();
+    const initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const initializationSettingsIOS = DarwinInitializationSettings();
+    const initializationSettings = InitializationSettings(
+      android: initializationSettingsAndroid,
+      iOS: initializationSettingsIOS,
     );
-
-    try {
-      final androidPlugin = _notifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
-      await androidPlugin?.createNotificationChannel(channel);
-      await _notifications.initialize(settings);
-      _logger.info('Notification service initialized successfully');
-    } catch (e) {
-      _logger.severe('Failed to initialize notifications: $e');
-      throw Exception('Failed to initialize notifications: $e');
-    }
+    await _flutterLocalNotificationsPlugin.initialize(initializationSettings);
+    _logger.info('NotificationService initialized');
   }
 
-  Future<bool> _requestPermissions() async {
-    _logger.info('Requesting permissions');
-    try {
-      final androidPlugin = _notifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
-      final exactAlarm = await androidPlugin?.requestExactAlarmsPermission() ?? true;
-      final notifications = await androidPlugin?.requestNotificationsPermission() ?? true;
-      _logger.info('Permissions granted: exactAlarm=$exactAlarm, notifications=$notifications');
-      if (!exactAlarm || !notifications) {
-        _logger.warning('Permissions denied: exactAlarm=$exactAlarm, notifications=$notifications');
-      }
-      return exactAlarm && notifications;
-    } catch (e) {
-      _logger.severe('Error requesting permissions: $e');
-      return false;
-    }
-  }
-
-  Future<void> scheduleNotification(
-      String id,
-      String title,
-      String body,
-      tz.TZDateTime scheduledTime, {
-        List<String> days = const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-      }) async {
-    _logger.info('Scheduling notification: id=$id, time=$scheduledTime, days=$days');
-    if (!await _requestPermissions()) {
-      _logger.severe('Permissions denied for id=$id');
-      throw PlatformException(
-        code: 'permissions_denied',
-        message: 'Exact alarms or notifications not permitted.',
-      );
-    }
-
-    try {
-      final now = tz.TZDateTime.now(tz.local);
-      final dayMap = {'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6, 'Sun': 7};
-
-      for (final day in days) {
-        final targetDay = dayMap[day]!;
-        var nextDate = tz.TZDateTime(
-          tz.local,
-          now.year,
-          now.month,
-          now.day,
-          scheduledTime.hour,
-          scheduledTime.minute,
-        );
-        while (nextDate.weekday != targetDay || nextDate.isBefore(now.add(const Duration(minutes: 1)))) {
-          nextDate = nextDate.add(const Duration(days: 1));
-        }
-        await _notifications.zonedSchedule(
-          (id + day).hashCode,
-          title,
-          body,
-          nextDate,
-          const NotificationDetails(
-            android: AndroidNotificationDetails(
-              'medication_channel',
-              'Medication Reminders',
-              channelDescription: 'Notifications for medication reminders',
-              importance: Importance.high,
-              priority: Priority.high,
-              playSound: true,
-              enableVibration: true,
-            ),
-          ),
-          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-          matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
-        );
-        _logger.info('Scheduled notification for id=$id, day=$day, time=$nextDate');
-      }
-
-      final pending = await _notifications.pendingNotificationRequests();
-      final scheduled = days.any((day) => pending.any((req) => req.id == (id + day).hashCode));
-      if (!scheduled && days.isNotEmpty) {
-        _logger.severe('No notifications scheduled for id=$id');
-        throw Exception('Failed to schedule notification');
-      }
-      _logger.info('Verified pending notifications for id=$id: ${pending.map((req) => req.id).toList()}');
-    } catch (e) {
-      _logger.severe('Failed to schedule notification: $e');
-      rethrow;
-    }
-  }
-
-  Future<void> scheduleTestNotification() async { // Add this method
+  Future<void> scheduleNotification({
+    required String id,
+    required String title,
+    required String body,
+    required DateTime scheduledTime,
+    required List<String> days,
+  }) async {
     final now = tz.TZDateTime.now(tz.local);
-    final testTime = now.add(const Duration(minutes: 2));
-    await scheduleNotification(
-      'test_notification',
-      'Test Reminder',
-      'This is a test notification',
-      testTime,
-      days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-    );
-    _logger.info('Test notification scheduled for $testTime');
+    for (final day in days) {
+      final dayIndex = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].indexOf(day);
+      if (dayIndex == -1) continue;
+      final nextDay = now.add(Duration(days: (dayIndex - now.weekday + 7) % 7));
+      final scheduled = tz.TZDateTime(
+        tz.local,
+        nextDay.year,
+        nextDay.month,
+        nextDay.day,
+        scheduledTime.hour,
+        scheduledTime.minute,
+      );
+      await _flutterLocalNotificationsPlugin.zonedSchedule(
+        id.hashCode,
+        title,
+        body,
+        scheduled,
+        const NotificationDetails(
+          android: AndroidNotificationDetails('medminder', 'MedMinder Notifications'),
+          iOS: DarwinNotificationDetails(),
+        ),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+      );
+      _logger.info('Scheduled notification: $id for $scheduled');
+    }
   }
 
   Future<void> cancelNotification(String id) async {
-    _logger.info('Cancelling notification: id=$id');
-    try {
-      for (final day in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']) {
-        await _notifications.cancel((id + day).hashCode);
-        _logger.info('Cancelled notification for id=$id, day=$day');
-      }
-    } catch (e) {
-      _logger.severe('Failed to cancel notification: $e');
-    }
-  }
-
-  Future<void> logPendingNotifications() async { // Add for debugging
-    final pending = await _notifications.pendingNotificationRequests();
-    _logger.info('Pending notifications: ${pending.map((req) => {'id': req.id, 'title': req.title, 'body': req.body}).toList()}');
+    await _flutterLocalNotificationsPlugin.cancel(id.hashCode);
+    _logger.info('Cancelled notification: $id');
   }
 }

@@ -454,6 +454,17 @@ class $DosesTable extends Doses with TableInfo<$DosesTable, Dose> {
       'REFERENCES medications (id)',
     ),
   );
+  static const VerificationMeta _medicationNameMeta = const VerificationMeta(
+    'medicationName',
+  );
+  @override
+  late final GeneratedColumn<String> medicationName = GeneratedColumn<String>(
+    'medication_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
   static const VerificationMeta _amountMeta = const VerificationMeta('amount');
   @override
   late final GeneratedColumn<double> amount = GeneratedColumn<double>(
@@ -471,6 +482,28 @@ class $DosesTable extends Doses with TableInfo<$DosesTable, Dose> {
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
+  );
+  static const VerificationMeta _timeMeta = const VerificationMeta('time');
+  @override
+  late final GeneratedColumn<DateTime> time = GeneratedColumn<DateTime>(
+    'time',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _takenMeta = const VerificationMeta('taken');
+  @override
+  late final GeneratedColumn<bool> taken = GeneratedColumn<bool>(
+    'taken',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("taken" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
   );
   static const VerificationMeta _weightMeta = const VerificationMeta('weight');
   @override
@@ -495,8 +528,11 @@ class $DosesTable extends Doses with TableInfo<$DosesTable, Dose> {
   List<GeneratedColumn> get $columns => [
     id,
     medicationId,
+    medicationName,
     amount,
     unit,
+    time,
+    taken,
     weight,
     name,
   ];
@@ -526,6 +562,17 @@ class $DosesTable extends Doses with TableInfo<$DosesTable, Dose> {
     } else if (isInserting) {
       context.missing(_medicationIdMeta);
     }
+    if (data.containsKey('medication_name')) {
+      context.handle(
+        _medicationNameMeta,
+        medicationName.isAcceptableOrUnknown(
+          data['medication_name']!,
+          _medicationNameMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_medicationNameMeta);
+    }
     if (data.containsKey('amount')) {
       context.handle(
         _amountMeta,
@@ -541,6 +588,20 @@ class $DosesTable extends Doses with TableInfo<$DosesTable, Dose> {
       );
     } else if (isInserting) {
       context.missing(_unitMeta);
+    }
+    if (data.containsKey('time')) {
+      context.handle(
+        _timeMeta,
+        time.isAcceptableOrUnknown(data['time']!, _timeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_timeMeta);
+    }
+    if (data.containsKey('taken')) {
+      context.handle(
+        _takenMeta,
+        taken.isAcceptableOrUnknown(data['taken']!, _takenMeta),
+      );
     }
     if (data.containsKey('weight')) {
       context.handle(
@@ -571,6 +632,10 @@ class $DosesTable extends Doses with TableInfo<$DosesTable, Dose> {
         DriftSqlType.int,
         data['${effectivePrefix}medication_id'],
       )!,
+      medicationName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}medication_name'],
+      )!,
       amount: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
         data['${effectivePrefix}amount'],
@@ -578,6 +643,14 @@ class $DosesTable extends Doses with TableInfo<$DosesTable, Dose> {
       unit: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}unit'],
+      )!,
+      time: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}time'],
+      )!,
+      taken: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}taken'],
       )!,
       weight: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
@@ -599,15 +672,21 @@ class $DosesTable extends Doses with TableInfo<$DosesTable, Dose> {
 class Dose extends DataClass implements Insertable<Dose> {
   final int id;
   final int medicationId;
+  final String medicationName;
   final double amount;
   final String unit;
+  final DateTime time;
+  final bool taken;
   final double weight;
   final String? name;
   const Dose({
     required this.id,
     required this.medicationId,
+    required this.medicationName,
     required this.amount,
     required this.unit,
+    required this.time,
+    required this.taken,
     required this.weight,
     this.name,
   });
@@ -616,8 +695,11 @@ class Dose extends DataClass implements Insertable<Dose> {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['medication_id'] = Variable<int>(medicationId);
+    map['medication_name'] = Variable<String>(medicationName);
     map['amount'] = Variable<double>(amount);
     map['unit'] = Variable<String>(unit);
+    map['time'] = Variable<DateTime>(time);
+    map['taken'] = Variable<bool>(taken);
     map['weight'] = Variable<double>(weight);
     if (!nullToAbsent || name != null) {
       map['name'] = Variable<String>(name);
@@ -629,8 +711,11 @@ class Dose extends DataClass implements Insertable<Dose> {
     return DosesCompanion(
       id: Value(id),
       medicationId: Value(medicationId),
+      medicationName: Value(medicationName),
       amount: Value(amount),
       unit: Value(unit),
+      time: Value(time),
+      taken: Value(taken),
       weight: Value(weight),
       name: name == null && nullToAbsent ? const Value.absent() : Value(name),
     );
@@ -644,8 +729,11 @@ class Dose extends DataClass implements Insertable<Dose> {
     return Dose(
       id: serializer.fromJson<int>(json['id']),
       medicationId: serializer.fromJson<int>(json['medicationId']),
+      medicationName: serializer.fromJson<String>(json['medicationName']),
       amount: serializer.fromJson<double>(json['amount']),
       unit: serializer.fromJson<String>(json['unit']),
+      time: serializer.fromJson<DateTime>(json['time']),
+      taken: serializer.fromJson<bool>(json['taken']),
       weight: serializer.fromJson<double>(json['weight']),
       name: serializer.fromJson<String?>(json['name']),
     );
@@ -656,8 +744,11 @@ class Dose extends DataClass implements Insertable<Dose> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'medicationId': serializer.toJson<int>(medicationId),
+      'medicationName': serializer.toJson<String>(medicationName),
       'amount': serializer.toJson<double>(amount),
       'unit': serializer.toJson<String>(unit),
+      'time': serializer.toJson<DateTime>(time),
+      'taken': serializer.toJson<bool>(taken),
       'weight': serializer.toJson<double>(weight),
       'name': serializer.toJson<String?>(name),
     };
@@ -666,15 +757,21 @@ class Dose extends DataClass implements Insertable<Dose> {
   Dose copyWith({
     int? id,
     int? medicationId,
+    String? medicationName,
     double? amount,
     String? unit,
+    DateTime? time,
+    bool? taken,
     double? weight,
     Value<String?> name = const Value.absent(),
   }) => Dose(
     id: id ?? this.id,
     medicationId: medicationId ?? this.medicationId,
+    medicationName: medicationName ?? this.medicationName,
     amount: amount ?? this.amount,
     unit: unit ?? this.unit,
+    time: time ?? this.time,
+    taken: taken ?? this.taken,
     weight: weight ?? this.weight,
     name: name.present ? name.value : this.name,
   );
@@ -684,8 +781,13 @@ class Dose extends DataClass implements Insertable<Dose> {
       medicationId: data.medicationId.present
           ? data.medicationId.value
           : this.medicationId,
+      medicationName: data.medicationName.present
+          ? data.medicationName.value
+          : this.medicationName,
       amount: data.amount.present ? data.amount.value : this.amount,
       unit: data.unit.present ? data.unit.value : this.unit,
+      time: data.time.present ? data.time.value : this.time,
+      taken: data.taken.present ? data.taken.value : this.taken,
       weight: data.weight.present ? data.weight.value : this.weight,
       name: data.name.present ? data.name.value : this.name,
     );
@@ -696,8 +798,11 @@ class Dose extends DataClass implements Insertable<Dose> {
     return (StringBuffer('Dose(')
           ..write('id: $id, ')
           ..write('medicationId: $medicationId, ')
+          ..write('medicationName: $medicationName, ')
           ..write('amount: $amount, ')
           ..write('unit: $unit, ')
+          ..write('time: $time, ')
+          ..write('taken: $taken, ')
           ..write('weight: $weight, ')
           ..write('name: $name')
           ..write(')'))
@@ -705,15 +810,28 @@ class Dose extends DataClass implements Insertable<Dose> {
   }
 
   @override
-  int get hashCode => Object.hash(id, medicationId, amount, unit, weight, name);
+  int get hashCode => Object.hash(
+    id,
+    medicationId,
+    medicationName,
+    amount,
+    unit,
+    time,
+    taken,
+    weight,
+    name,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is Dose &&
           other.id == this.id &&
           other.medicationId == this.medicationId &&
+          other.medicationName == this.medicationName &&
           other.amount == this.amount &&
           other.unit == this.unit &&
+          other.time == this.time &&
+          other.taken == this.taken &&
           other.weight == this.weight &&
           other.name == this.name);
 }
@@ -721,41 +839,58 @@ class Dose extends DataClass implements Insertable<Dose> {
 class DosesCompanion extends UpdateCompanion<Dose> {
   final Value<int> id;
   final Value<int> medicationId;
+  final Value<String> medicationName;
   final Value<double> amount;
   final Value<String> unit;
+  final Value<DateTime> time;
+  final Value<bool> taken;
   final Value<double> weight;
   final Value<String?> name;
   const DosesCompanion({
     this.id = const Value.absent(),
     this.medicationId = const Value.absent(),
+    this.medicationName = const Value.absent(),
     this.amount = const Value.absent(),
     this.unit = const Value.absent(),
+    this.time = const Value.absent(),
+    this.taken = const Value.absent(),
     this.weight = const Value.absent(),
     this.name = const Value.absent(),
   });
   DosesCompanion.insert({
     this.id = const Value.absent(),
     required int medicationId,
+    required String medicationName,
     required double amount,
     required String unit,
+    required DateTime time,
+    this.taken = const Value.absent(),
     this.weight = const Value.absent(),
     this.name = const Value.absent(),
   }) : medicationId = Value(medicationId),
+       medicationName = Value(medicationName),
        amount = Value(amount),
-       unit = Value(unit);
+       unit = Value(unit),
+       time = Value(time);
   static Insertable<Dose> custom({
     Expression<int>? id,
     Expression<int>? medicationId,
+    Expression<String>? medicationName,
     Expression<double>? amount,
     Expression<String>? unit,
+    Expression<DateTime>? time,
+    Expression<bool>? taken,
     Expression<double>? weight,
     Expression<String>? name,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (medicationId != null) 'medication_id': medicationId,
+      if (medicationName != null) 'medication_name': medicationName,
       if (amount != null) 'amount': amount,
       if (unit != null) 'unit': unit,
+      if (time != null) 'time': time,
+      if (taken != null) 'taken': taken,
       if (weight != null) 'weight': weight,
       if (name != null) 'name': name,
     });
@@ -764,16 +899,22 @@ class DosesCompanion extends UpdateCompanion<Dose> {
   DosesCompanion copyWith({
     Value<int>? id,
     Value<int>? medicationId,
+    Value<String>? medicationName,
     Value<double>? amount,
     Value<String>? unit,
+    Value<DateTime>? time,
+    Value<bool>? taken,
     Value<double>? weight,
     Value<String?>? name,
   }) {
     return DosesCompanion(
       id: id ?? this.id,
       medicationId: medicationId ?? this.medicationId,
+      medicationName: medicationName ?? this.medicationName,
       amount: amount ?? this.amount,
       unit: unit ?? this.unit,
+      time: time ?? this.time,
+      taken: taken ?? this.taken,
       weight: weight ?? this.weight,
       name: name ?? this.name,
     );
@@ -788,11 +929,20 @@ class DosesCompanion extends UpdateCompanion<Dose> {
     if (medicationId.present) {
       map['medication_id'] = Variable<int>(medicationId.value);
     }
+    if (medicationName.present) {
+      map['medication_name'] = Variable<String>(medicationName.value);
+    }
     if (amount.present) {
       map['amount'] = Variable<double>(amount.value);
     }
     if (unit.present) {
       map['unit'] = Variable<String>(unit.value);
+    }
+    if (time.present) {
+      map['time'] = Variable<DateTime>(time.value);
+    }
+    if (taken.present) {
+      map['taken'] = Variable<bool>(taken.value);
     }
     if (weight.present) {
       map['weight'] = Variable<double>(weight.value);
@@ -808,8 +958,11 @@ class DosesCompanion extends UpdateCompanion<Dose> {
     return (StringBuffer('DosesCompanion(')
           ..write('id: $id, ')
           ..write('medicationId: $medicationId, ')
+          ..write('medicationName: $medicationName, ')
           ..write('amount: $amount, ')
           ..write('unit: $unit, ')
+          ..write('time: $time, ')
+          ..write('taken: $taken, ')
           ..write('weight: $weight, ')
           ..write('name: $name')
           ..write(')'))
@@ -835,6 +988,31 @@ class $SchedulesTable extends Schedules
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'PRIMARY KEY AUTOINCREMENT',
     ),
+  );
+  static const VerificationMeta _medicationIdMeta = const VerificationMeta(
+    'medicationId',
+  );
+  @override
+  late final GeneratedColumn<int> medicationId = GeneratedColumn<int>(
+    'medication_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES medications (id)',
+    ),
+  );
+  static const VerificationMeta _medicationNameMeta = const VerificationMeta(
+    'medicationName',
+  );
+  @override
+  late final GeneratedColumn<String> medicationName = GeneratedColumn<String>(
+    'medication_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
   );
   static const VerificationMeta _doseIdMeta = const VerificationMeta('doseId');
   @override
@@ -887,6 +1065,20 @@ class $SchedulesTable extends Schedules
     requiredDuringInsert: false,
     defaultValue: const Constant(''),
   );
+  static const VerificationMeta _notificationsEnabledMeta =
+      const VerificationMeta('notificationsEnabled');
+  @override
+  late final GeneratedColumn<bool> notificationsEnabled = GeneratedColumn<bool>(
+    'notifications_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("notifications_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
   static const VerificationMeta _notificationIdMeta = const VerificationMeta(
     'notificationId',
   );
@@ -901,11 +1093,14 @@ class $SchedulesTable extends Schedules
   @override
   List<GeneratedColumn> get $columns => [
     id,
+    medicationId,
+    medicationName,
     doseId,
     frequency,
     days,
     time,
     name,
+    notificationsEnabled,
     notificationId,
   ];
   @override
@@ -922,6 +1117,28 @@ class $SchedulesTable extends Schedules
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('medication_id')) {
+      context.handle(
+        _medicationIdMeta,
+        medicationId.isAcceptableOrUnknown(
+          data['medication_id']!,
+          _medicationIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_medicationIdMeta);
+    }
+    if (data.containsKey('medication_name')) {
+      context.handle(
+        _medicationNameMeta,
+        medicationName.isAcceptableOrUnknown(
+          data['medication_name']!,
+          _medicationNameMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_medicationNameMeta);
     }
     if (data.containsKey('dose_id')) {
       context.handle(
@@ -951,6 +1168,15 @@ class $SchedulesTable extends Schedules
         name.isAcceptableOrUnknown(data['name']!, _nameMeta),
       );
     }
+    if (data.containsKey('notifications_enabled')) {
+      context.handle(
+        _notificationsEnabledMeta,
+        notificationsEnabled.isAcceptableOrUnknown(
+          data['notifications_enabled']!,
+          _notificationsEnabledMeta,
+        ),
+      );
+    }
     if (data.containsKey('notification_id')) {
       context.handle(
         _notificationIdMeta,
@@ -972,6 +1198,14 @@ class $SchedulesTable extends Schedules
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}id'],
+      )!,
+      medicationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}medication_id'],
+      )!,
+      medicationName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}medication_name'],
       )!,
       doseId: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
@@ -995,6 +1229,10 @@ class $SchedulesTable extends Schedules
         DriftSqlType.string,
         data['${effectivePrefix}name'],
       )!,
+      notificationsEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}notifications_enabled'],
+      )!,
       notificationId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}notification_id'],
@@ -1013,25 +1251,33 @@ class $SchedulesTable extends Schedules
 
 class Schedule extends DataClass implements Insertable<Schedule> {
   final int id;
+  final int medicationId;
+  final String medicationName;
   final int? doseId;
   final String frequency;
   final List<String> days;
   final DateTime time;
   final String name;
+  final bool notificationsEnabled;
   final String? notificationId;
   const Schedule({
     required this.id,
+    required this.medicationId,
+    required this.medicationName,
     this.doseId,
     required this.frequency,
     required this.days,
     required this.time,
     required this.name,
+    required this.notificationsEnabled,
     this.notificationId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
+    map['medication_id'] = Variable<int>(medicationId);
+    map['medication_name'] = Variable<String>(medicationName);
     if (!nullToAbsent || doseId != null) {
       map['dose_id'] = Variable<int>(doseId);
     }
@@ -1043,6 +1289,7 @@ class Schedule extends DataClass implements Insertable<Schedule> {
     }
     map['time'] = Variable<DateTime>(time);
     map['name'] = Variable<String>(name);
+    map['notifications_enabled'] = Variable<bool>(notificationsEnabled);
     if (!nullToAbsent || notificationId != null) {
       map['notification_id'] = Variable<String>(notificationId);
     }
@@ -1052,6 +1299,8 @@ class Schedule extends DataClass implements Insertable<Schedule> {
   SchedulesCompanion toCompanion(bool nullToAbsent) {
     return SchedulesCompanion(
       id: Value(id),
+      medicationId: Value(medicationId),
+      medicationName: Value(medicationName),
       doseId: doseId == null && nullToAbsent
           ? const Value.absent()
           : Value(doseId),
@@ -1059,6 +1308,7 @@ class Schedule extends DataClass implements Insertable<Schedule> {
       days: Value(days),
       time: Value(time),
       name: Value(name),
+      notificationsEnabled: Value(notificationsEnabled),
       notificationId: notificationId == null && nullToAbsent
           ? const Value.absent()
           : Value(notificationId),
@@ -1072,11 +1322,16 @@ class Schedule extends DataClass implements Insertable<Schedule> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return Schedule(
       id: serializer.fromJson<int>(json['id']),
+      medicationId: serializer.fromJson<int>(json['medicationId']),
+      medicationName: serializer.fromJson<String>(json['medicationName']),
       doseId: serializer.fromJson<int?>(json['doseId']),
       frequency: serializer.fromJson<String>(json['frequency']),
       days: serializer.fromJson<List<String>>(json['days']),
       time: serializer.fromJson<DateTime>(json['time']),
       name: serializer.fromJson<String>(json['name']),
+      notificationsEnabled: serializer.fromJson<bool>(
+        json['notificationsEnabled'],
+      ),
       notificationId: serializer.fromJson<String?>(json['notificationId']),
     );
   }
@@ -1085,30 +1340,39 @@ class Schedule extends DataClass implements Insertable<Schedule> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
+      'medicationId': serializer.toJson<int>(medicationId),
+      'medicationName': serializer.toJson<String>(medicationName),
       'doseId': serializer.toJson<int?>(doseId),
       'frequency': serializer.toJson<String>(frequency),
       'days': serializer.toJson<List<String>>(days),
       'time': serializer.toJson<DateTime>(time),
       'name': serializer.toJson<String>(name),
+      'notificationsEnabled': serializer.toJson<bool>(notificationsEnabled),
       'notificationId': serializer.toJson<String?>(notificationId),
     };
   }
 
   Schedule copyWith({
     int? id,
+    int? medicationId,
+    String? medicationName,
     Value<int?> doseId = const Value.absent(),
     String? frequency,
     List<String>? days,
     DateTime? time,
     String? name,
+    bool? notificationsEnabled,
     Value<String?> notificationId = const Value.absent(),
   }) => Schedule(
     id: id ?? this.id,
+    medicationId: medicationId ?? this.medicationId,
+    medicationName: medicationName ?? this.medicationName,
     doseId: doseId.present ? doseId.value : this.doseId,
     frequency: frequency ?? this.frequency,
     days: days ?? this.days,
     time: time ?? this.time,
     name: name ?? this.name,
+    notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
     notificationId: notificationId.present
         ? notificationId.value
         : this.notificationId,
@@ -1116,11 +1380,20 @@ class Schedule extends DataClass implements Insertable<Schedule> {
   Schedule copyWithCompanion(SchedulesCompanion data) {
     return Schedule(
       id: data.id.present ? data.id.value : this.id,
+      medicationId: data.medicationId.present
+          ? data.medicationId.value
+          : this.medicationId,
+      medicationName: data.medicationName.present
+          ? data.medicationName.value
+          : this.medicationName,
       doseId: data.doseId.present ? data.doseId.value : this.doseId,
       frequency: data.frequency.present ? data.frequency.value : this.frequency,
       days: data.days.present ? data.days.value : this.days,
       time: data.time.present ? data.time.value : this.time,
       name: data.name.present ? data.name.value : this.name,
+      notificationsEnabled: data.notificationsEnabled.present
+          ? data.notificationsEnabled.value
+          : this.notificationsEnabled,
       notificationId: data.notificationId.present
           ? data.notificationId.value
           : this.notificationId,
@@ -1131,96 +1404,136 @@ class Schedule extends DataClass implements Insertable<Schedule> {
   String toString() {
     return (StringBuffer('Schedule(')
           ..write('id: $id, ')
+          ..write('medicationId: $medicationId, ')
+          ..write('medicationName: $medicationName, ')
           ..write('doseId: $doseId, ')
           ..write('frequency: $frequency, ')
           ..write('days: $days, ')
           ..write('time: $time, ')
           ..write('name: $name, ')
+          ..write('notificationsEnabled: $notificationsEnabled, ')
           ..write('notificationId: $notificationId')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, doseId, frequency, days, time, name, notificationId);
+  int get hashCode => Object.hash(
+    id,
+    medicationId,
+    medicationName,
+    doseId,
+    frequency,
+    days,
+    time,
+    name,
+    notificationsEnabled,
+    notificationId,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is Schedule &&
           other.id == this.id &&
+          other.medicationId == this.medicationId &&
+          other.medicationName == this.medicationName &&
           other.doseId == this.doseId &&
           other.frequency == this.frequency &&
           other.days == this.days &&
           other.time == this.time &&
           other.name == this.name &&
+          other.notificationsEnabled == this.notificationsEnabled &&
           other.notificationId == this.notificationId);
 }
 
 class SchedulesCompanion extends UpdateCompanion<Schedule> {
   final Value<int> id;
+  final Value<int> medicationId;
+  final Value<String> medicationName;
   final Value<int?> doseId;
   final Value<String> frequency;
   final Value<List<String>> days;
   final Value<DateTime> time;
   final Value<String> name;
+  final Value<bool> notificationsEnabled;
   final Value<String?> notificationId;
   const SchedulesCompanion({
     this.id = const Value.absent(),
+    this.medicationId = const Value.absent(),
+    this.medicationName = const Value.absent(),
     this.doseId = const Value.absent(),
     this.frequency = const Value.absent(),
     this.days = const Value.absent(),
     this.time = const Value.absent(),
     this.name = const Value.absent(),
+    this.notificationsEnabled = const Value.absent(),
     this.notificationId = const Value.absent(),
   });
   SchedulesCompanion.insert({
     this.id = const Value.absent(),
+    required int medicationId,
+    required String medicationName,
     this.doseId = const Value.absent(),
     required String frequency,
     required List<String> days,
     required DateTime time,
     this.name = const Value.absent(),
+    this.notificationsEnabled = const Value.absent(),
     this.notificationId = const Value.absent(),
-  }) : frequency = Value(frequency),
+  }) : medicationId = Value(medicationId),
+       medicationName = Value(medicationName),
+       frequency = Value(frequency),
        days = Value(days),
        time = Value(time);
   static Insertable<Schedule> custom({
     Expression<int>? id,
+    Expression<int>? medicationId,
+    Expression<String>? medicationName,
     Expression<int>? doseId,
     Expression<String>? frequency,
     Expression<String>? days,
     Expression<DateTime>? time,
     Expression<String>? name,
+    Expression<bool>? notificationsEnabled,
     Expression<String>? notificationId,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (medicationId != null) 'medication_id': medicationId,
+      if (medicationName != null) 'medication_name': medicationName,
       if (doseId != null) 'dose_id': doseId,
       if (frequency != null) 'frequency': frequency,
       if (days != null) 'days': days,
       if (time != null) 'time': time,
       if (name != null) 'name': name,
+      if (notificationsEnabled != null)
+        'notifications_enabled': notificationsEnabled,
       if (notificationId != null) 'notification_id': notificationId,
     });
   }
 
   SchedulesCompanion copyWith({
     Value<int>? id,
+    Value<int>? medicationId,
+    Value<String>? medicationName,
     Value<int?>? doseId,
     Value<String>? frequency,
     Value<List<String>>? days,
     Value<DateTime>? time,
     Value<String>? name,
+    Value<bool>? notificationsEnabled,
     Value<String?>? notificationId,
   }) {
     return SchedulesCompanion(
       id: id ?? this.id,
+      medicationId: medicationId ?? this.medicationId,
+      medicationName: medicationName ?? this.medicationName,
       doseId: doseId ?? this.doseId,
       frequency: frequency ?? this.frequency,
       days: days ?? this.days,
       time: time ?? this.time,
       name: name ?? this.name,
+      notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
       notificationId: notificationId ?? this.notificationId,
     );
   }
@@ -1230,6 +1543,12 @@ class SchedulesCompanion extends UpdateCompanion<Schedule> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<int>(id.value);
+    }
+    if (medicationId.present) {
+      map['medication_id'] = Variable<int>(medicationId.value);
+    }
+    if (medicationName.present) {
+      map['medication_name'] = Variable<String>(medicationName.value);
     }
     if (doseId.present) {
       map['dose_id'] = Variable<int>(doseId.value);
@@ -1248,6 +1567,9 @@ class SchedulesCompanion extends UpdateCompanion<Schedule> {
     if (name.present) {
       map['name'] = Variable<String>(name.value);
     }
+    if (notificationsEnabled.present) {
+      map['notifications_enabled'] = Variable<bool>(notificationsEnabled.value);
+    }
     if (notificationId.present) {
       map['notification_id'] = Variable<String>(notificationId.value);
     }
@@ -1258,11 +1580,14 @@ class SchedulesCompanion extends UpdateCompanion<Schedule> {
   String toString() {
     return (StringBuffer('SchedulesCompanion(')
           ..write('id: $id, ')
+          ..write('medicationId: $medicationId, ')
+          ..write('medicationName: $medicationName, ')
           ..write('doseId: $doseId, ')
           ..write('frequency: $frequency, ')
           ..write('days: $days, ')
           ..write('time: $time, ')
           ..write('name: $name, ')
+          ..write('notificationsEnabled: $notificationsEnabled, ')
           ..write('notificationId: $notificationId')
           ..write(')'))
         .toString();
@@ -1581,6 +1906,27 @@ final class $$MedicationsTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$SchedulesTable, List<Schedule>>
+  _schedulesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.schedules,
+    aliasName: $_aliasNameGenerator(
+      db.medications.id,
+      db.schedules.medicationId,
+    ),
+  );
+
+  $$SchedulesTableProcessedTableManager get schedulesRefs {
+    final manager = $$SchedulesTableTableManager(
+      $_db,
+      $_db.schedules,
+    ).filter((f) => f.medicationId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_schedulesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$MedicationsTableFilterComposer
@@ -1638,6 +1984,31 @@ class $$MedicationsTableFilterComposer
           }) => $$DosesTableFilterComposer(
             $db: $db,
             $table: $db.doses,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> schedulesRefs(
+    Expression<bool> Function($$SchedulesTableFilterComposer f) f,
+  ) {
+    final $$SchedulesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.schedules,
+      getReferencedColumn: (t) => t.medicationId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SchedulesTableFilterComposer(
+            $db: $db,
+            $table: $db.schedules,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -1745,6 +2116,31 @@ class $$MedicationsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> schedulesRefs<T extends Object>(
+    Expression<T> Function($$SchedulesTableAnnotationComposer a) f,
+  ) {
+    final $$SchedulesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.schedules,
+      getReferencedColumn: (t) => t.medicationId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SchedulesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.schedules,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$MedicationsTableTableManager
@@ -1760,7 +2156,7 @@ class $$MedicationsTableTableManager
           $$MedicationsTableUpdateCompanionBuilder,
           (Medication, $$MedicationsTableReferences),
           Medication,
-          PrefetchHooks Function({bool dosesRefs})
+          PrefetchHooks Function({bool dosesRefs, bool schedulesRefs})
         > {
   $$MedicationsTableTableManager(_$AppDatabase db, $MedicationsTable table)
     : super(
@@ -1813,10 +2209,13 @@ class $$MedicationsTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({dosesRefs = false}) {
+          prefetchHooksCallback: ({dosesRefs = false, schedulesRefs = false}) {
             return PrefetchHooks(
               db: db,
-              explicitlyWatchedTables: [if (dosesRefs) db.doses],
+              explicitlyWatchedTables: [
+                if (dosesRefs) db.doses,
+                if (schedulesRefs) db.schedules,
+              ],
               addJoins: null,
               getPrefetchedDataCallback: (items) async {
                 return [
@@ -1831,6 +2230,27 @@ class $$MedicationsTableTableManager
                           ._dosesRefsTable(db),
                       managerFromTypedResult: (p0) =>
                           $$MedicationsTableReferences(db, table, p0).dosesRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where(
+                            (e) => e.medicationId == item.id,
+                          ),
+                      typedResults: items,
+                    ),
+                  if (schedulesRefs)
+                    await $_getPrefetchedData<
+                      Medication,
+                      $MedicationsTable,
+                      Schedule
+                    >(
+                      currentTable: table,
+                      referencedTable: $$MedicationsTableReferences
+                          ._schedulesRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$MedicationsTableReferences(
+                            db,
+                            table,
+                            p0,
+                          ).schedulesRefs,
                       referencedItemsForCurrentItem: (item, referencedItems) =>
                           referencedItems.where(
                             (e) => e.medicationId == item.id,
@@ -1857,14 +2277,17 @@ typedef $$MedicationsTableProcessedTableManager =
       $$MedicationsTableUpdateCompanionBuilder,
       (Medication, $$MedicationsTableReferences),
       Medication,
-      PrefetchHooks Function({bool dosesRefs})
+      PrefetchHooks Function({bool dosesRefs, bool schedulesRefs})
     >;
 typedef $$DosesTableCreateCompanionBuilder =
     DosesCompanion Function({
       Value<int> id,
       required int medicationId,
+      required String medicationName,
       required double amount,
       required String unit,
+      required DateTime time,
+      Value<bool> taken,
       Value<double> weight,
       Value<String?> name,
     });
@@ -1872,8 +2295,11 @@ typedef $$DosesTableUpdateCompanionBuilder =
     DosesCompanion Function({
       Value<int> id,
       Value<int> medicationId,
+      Value<String> medicationName,
       Value<double> amount,
       Value<String> unit,
+      Value<DateTime> time,
+      Value<bool> taken,
       Value<double> weight,
       Value<String?> name,
     });
@@ -1951,6 +2377,11 @@ class $$DosesTableFilterComposer extends Composer<_$AppDatabase, $DosesTable> {
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get medicationName => $composableBuilder(
+    column: $table.medicationName,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<double> get amount => $composableBuilder(
     column: $table.amount,
     builder: (column) => ColumnFilters(column),
@@ -1958,6 +2389,16 @@ class $$DosesTableFilterComposer extends Composer<_$AppDatabase, $DosesTable> {
 
   ColumnFilters<String> get unit => $composableBuilder(
     column: $table.unit,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get time => $composableBuilder(
+    column: $table.time,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get taken => $composableBuilder(
+    column: $table.taken,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2059,6 +2500,11 @@ class $$DosesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get medicationName => $composableBuilder(
+    column: $table.medicationName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<double> get amount => $composableBuilder(
     column: $table.amount,
     builder: (column) => ColumnOrderings(column),
@@ -2066,6 +2512,16 @@ class $$DosesTableOrderingComposer
 
   ColumnOrderings<String> get unit => $composableBuilder(
     column: $table.unit,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get time => $composableBuilder(
+    column: $table.time,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get taken => $composableBuilder(
+    column: $table.taken,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -2115,11 +2571,22 @@ class $$DosesTableAnnotationComposer
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
+  GeneratedColumn<String> get medicationName => $composableBuilder(
+    column: $table.medicationName,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<double> get amount =>
       $composableBuilder(column: $table.amount, builder: (column) => column);
 
   GeneratedColumn<String> get unit =>
       $composableBuilder(column: $table.unit, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get time =>
+      $composableBuilder(column: $table.time, builder: (column) => column);
+
+  GeneratedColumn<bool> get taken =>
+      $composableBuilder(column: $table.taken, builder: (column) => column);
 
   GeneratedColumn<double> get weight =>
       $composableBuilder(column: $table.weight, builder: (column) => column);
@@ -2235,15 +2702,21 @@ class $$DosesTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<int> medicationId = const Value.absent(),
+                Value<String> medicationName = const Value.absent(),
                 Value<double> amount = const Value.absent(),
                 Value<String> unit = const Value.absent(),
+                Value<DateTime> time = const Value.absent(),
+                Value<bool> taken = const Value.absent(),
                 Value<double> weight = const Value.absent(),
                 Value<String?> name = const Value.absent(),
               }) => DosesCompanion(
                 id: id,
                 medicationId: medicationId,
+                medicationName: medicationName,
                 amount: amount,
                 unit: unit,
+                time: time,
+                taken: taken,
                 weight: weight,
                 name: name,
               ),
@@ -2251,15 +2724,21 @@ class $$DosesTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 required int medicationId,
+                required String medicationName,
                 required double amount,
                 required String unit,
+                required DateTime time,
+                Value<bool> taken = const Value.absent(),
                 Value<double> weight = const Value.absent(),
                 Value<String?> name = const Value.absent(),
               }) => DosesCompanion.insert(
                 id: id,
                 medicationId: medicationId,
+                medicationName: medicationName,
                 amount: amount,
                 unit: unit,
+                time: time,
+                taken: taken,
                 weight: weight,
                 name: name,
               ),
@@ -2382,27 +2861,52 @@ typedef $$DosesTableProcessedTableManager =
 typedef $$SchedulesTableCreateCompanionBuilder =
     SchedulesCompanion Function({
       Value<int> id,
+      required int medicationId,
+      required String medicationName,
       Value<int?> doseId,
       required String frequency,
       required List<String> days,
       required DateTime time,
       Value<String> name,
+      Value<bool> notificationsEnabled,
       Value<String?> notificationId,
     });
 typedef $$SchedulesTableUpdateCompanionBuilder =
     SchedulesCompanion Function({
       Value<int> id,
+      Value<int> medicationId,
+      Value<String> medicationName,
       Value<int?> doseId,
       Value<String> frequency,
       Value<List<String>> days,
       Value<DateTime> time,
       Value<String> name,
+      Value<bool> notificationsEnabled,
       Value<String?> notificationId,
     });
 
 final class $$SchedulesTableReferences
     extends BaseReferences<_$AppDatabase, $SchedulesTable, Schedule> {
   $$SchedulesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $MedicationsTable _medicationIdTable(_$AppDatabase db) =>
+      db.medications.createAlias(
+        $_aliasNameGenerator(db.schedules.medicationId, db.medications.id),
+      );
+
+  $$MedicationsTableProcessedTableManager get medicationId {
+    final $_column = $_itemColumn<int>('medication_id')!;
+
+    final manager = $$MedicationsTableTableManager(
+      $_db,
+      $_db.medications,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_medicationIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
 
   static $DosesTable _doseIdTable(_$AppDatabase db) => db.doses.createAlias(
     $_aliasNameGenerator(db.schedules.doseId, db.doses.id),
@@ -2437,6 +2941,11 @@ class $$SchedulesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get medicationName => $composableBuilder(
+    column: $table.medicationName,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get frequency => $composableBuilder(
     column: $table.frequency,
     builder: (column) => ColumnFilters(column),
@@ -2458,10 +2967,38 @@ class $$SchedulesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<bool> get notificationsEnabled => $composableBuilder(
+    column: $table.notificationsEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get notificationId => $composableBuilder(
     column: $table.notificationId,
     builder: (column) => ColumnFilters(column),
   );
+
+  $$MedicationsTableFilterComposer get medicationId {
+    final $$MedicationsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.medicationId,
+      referencedTable: $db.medications,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MedicationsTableFilterComposer(
+            $db: $db,
+            $table: $db.medications,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 
   $$DosesTableFilterComposer get doseId {
     final $$DosesTableFilterComposer composer = $composerBuilder(
@@ -2501,6 +3038,11 @@ class $$SchedulesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get medicationName => $composableBuilder(
+    column: $table.medicationName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get frequency => $composableBuilder(
     column: $table.frequency,
     builder: (column) => ColumnOrderings(column),
@@ -2521,10 +3063,38 @@ class $$SchedulesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get notificationsEnabled => $composableBuilder(
+    column: $table.notificationsEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get notificationId => $composableBuilder(
     column: $table.notificationId,
     builder: (column) => ColumnOrderings(column),
   );
+
+  $$MedicationsTableOrderingComposer get medicationId {
+    final $$MedicationsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.medicationId,
+      referencedTable: $db.medications,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MedicationsTableOrderingComposer(
+            $db: $db,
+            $table: $db.medications,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 
   $$DosesTableOrderingComposer get doseId {
     final $$DosesTableOrderingComposer composer = $composerBuilder(
@@ -2562,6 +3132,11 @@ class $$SchedulesTableAnnotationComposer
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
+  GeneratedColumn<String> get medicationName => $composableBuilder(
+    column: $table.medicationName,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get frequency =>
       $composableBuilder(column: $table.frequency, builder: (column) => column);
 
@@ -2574,10 +3149,38 @@ class $$SchedulesTableAnnotationComposer
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
 
+  GeneratedColumn<bool> get notificationsEnabled => $composableBuilder(
+    column: $table.notificationsEnabled,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get notificationId => $composableBuilder(
     column: $table.notificationId,
     builder: (column) => column,
   );
+
+  $$MedicationsTableAnnotationComposer get medicationId {
+    final $$MedicationsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.medicationId,
+      referencedTable: $db.medications,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MedicationsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.medications,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 
   $$DosesTableAnnotationComposer get doseId {
     final $$DosesTableAnnotationComposer composer = $composerBuilder(
@@ -2616,7 +3219,7 @@ class $$SchedulesTableTableManager
           $$SchedulesTableUpdateCompanionBuilder,
           (Schedule, $$SchedulesTableReferences),
           Schedule,
-          PrefetchHooks Function({bool doseId})
+          PrefetchHooks Function({bool medicationId, bool doseId})
         > {
   $$SchedulesTableTableManager(_$AppDatabase db, $SchedulesTable table)
     : super(
@@ -2632,37 +3235,49 @@ class $$SchedulesTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<int> medicationId = const Value.absent(),
+                Value<String> medicationName = const Value.absent(),
                 Value<int?> doseId = const Value.absent(),
                 Value<String> frequency = const Value.absent(),
                 Value<List<String>> days = const Value.absent(),
                 Value<DateTime> time = const Value.absent(),
                 Value<String> name = const Value.absent(),
+                Value<bool> notificationsEnabled = const Value.absent(),
                 Value<String?> notificationId = const Value.absent(),
               }) => SchedulesCompanion(
                 id: id,
+                medicationId: medicationId,
+                medicationName: medicationName,
                 doseId: doseId,
                 frequency: frequency,
                 days: days,
                 time: time,
                 name: name,
+                notificationsEnabled: notificationsEnabled,
                 notificationId: notificationId,
               ),
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                required int medicationId,
+                required String medicationName,
                 Value<int?> doseId = const Value.absent(),
                 required String frequency,
                 required List<String> days,
                 required DateTime time,
                 Value<String> name = const Value.absent(),
+                Value<bool> notificationsEnabled = const Value.absent(),
                 Value<String?> notificationId = const Value.absent(),
               }) => SchedulesCompanion.insert(
                 id: id,
+                medicationId: medicationId,
+                medicationName: medicationName,
                 doseId: doseId,
                 frequency: frequency,
                 days: days,
                 time: time,
                 name: name,
+                notificationsEnabled: notificationsEnabled,
                 notificationId: notificationId,
               ),
           withReferenceMapper: (p0) => p0
@@ -2673,7 +3288,7 @@ class $$SchedulesTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({doseId = false}) {
+          prefetchHooksCallback: ({medicationId = false, doseId = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [],
@@ -2693,6 +3308,19 @@ class $$SchedulesTableTableManager
                       dynamic
                     >
                   >(state) {
+                    if (medicationId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.medicationId,
+                                referencedTable: $$SchedulesTableReferences
+                                    ._medicationIdTable(db),
+                                referencedColumn: $$SchedulesTableReferences
+                                    ._medicationIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
                     if (doseId) {
                       state =
                           state.withJoin(
@@ -2730,7 +3358,7 @@ typedef $$SchedulesTableProcessedTableManager =
       $$SchedulesTableUpdateCompanionBuilder,
       (Schedule, $$SchedulesTableReferences),
       Schedule,
-      PrefetchHooks Function({bool doseId})
+      PrefetchHooks Function({bool medicationId, bool doseId})
     >;
 typedef $$DoseHistoryTableCreateCompanionBuilder =
     DoseHistoryCompanion Function({

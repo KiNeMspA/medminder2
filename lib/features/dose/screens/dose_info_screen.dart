@@ -4,16 +4,16 @@ import '../../../common/utils/formatters.dart';
 import '../../../data/database.dart';
 import '../../../services/drift_service.dart';
 
-class MedicationsInfoScreen extends ConsumerWidget {
-  const MedicationsInfoScreen({super.key});
+class DosesInfoScreen extends ConsumerWidget {
+  const DosesInfoScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final medicationsAsync = ref.watch(medicationsProvider);
+    final dosesAsync = ref.watch(allDosesProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Medications'),
+        title: const Text('Doses'),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -30,36 +30,22 @@ class MedicationsInfoScreen extends ConsumerWidget {
           ),
         ),
       ),
-      body: medicationsAsync.when(
-        data: (meds) => meds.isEmpty
-            ? const Center(child: Text('No medications'))
+      body: dosesAsync.when(
+        data: (doses) => doses.isEmpty
+            ? const Center(child: Text('No doses scheduled'))
             : ListView.builder(
-          itemCount: meds.length,
-          itemBuilder: (context, index) {
-            final med = meds[index];
-            return Card(
-              margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
-              child: ListTile(
-                title: Text(med.name),
-                subtitle: Text(
-                  '${med.form} - ${Utils.removeTrailingZeros(med.concentration)}${med.concentrationUnit}, Stock: ${Utils.removeTrailingZeros(med.stockQuantity)}',
-                ),
-                trailing: IconButton(
-                  icon: const Icon(Icons.edit),
-                  onPressed: () => Navigator.pushNamed(
-                    context,
-                    '/medications/edit',
-                    arguments: med.id,
-                  ),
-                ),
-                onTap: () => Navigator.pushNamed(
-                  context,
-                  '/medications/edit',
-                  arguments: med.id,
-                ),
+          itemCount: doses.length,
+          itemBuilder: (context, index) => Card(
+            margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+            child: ListTile(
+              title: Text(doses[index].name ?? 'Unnamed'),
+              subtitle: Text('Amount: ${Utils.removeTrailingZeros(doses[index].amount)} ${doses[index].unit}, Medication ID: ${doses[index].medicationId}'),
+              trailing: IconButton(
+                icon: const Icon(Icons.edit),
+                onPressed: () => Navigator.pushNamed(context, '/doses/edit', arguments: doses[index].id),
               ),
-            );
-          },
+            ),
+          ),
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Card(
@@ -71,7 +57,7 @@ class MedicationsInfoScreen extends ConsumerWidget {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => Navigator.pushNamed(context, '/medications/add'),
+        onPressed: () => Navigator.pushNamed(context, '/doses/add'),
         child: const Icon(Icons.add),
       ),
     );
