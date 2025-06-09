@@ -149,7 +149,7 @@ class AppDatabase extends _$AppDatabase {
     return doseId;
   }
 
-  Future<List<DoseHistory>> getDoseHistory(int doseId) async {
+  Future<List<DoseHistoryData>> getDoseHistory(int doseId) async {
     return (select(doseHistory)..where((tbl) => tbl.doseId.equals(doseId))).get();
   }
 
