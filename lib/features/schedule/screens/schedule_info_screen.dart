@@ -88,7 +88,13 @@ class _SchedulesInfoScreenState extends ConsumerState<SchedulesInfoScreen> {
     final isScheduled = schedule.frequency == 'Daily' || schedule.days.contains(day ?? _weekdayToString(now.weekday));
     if (!isScheduled) return 'Upcoming';
     final targetDate = _getDateForDay(now, targetDay);
-    final scheduleTime = DateTime(targetDate.year, targetDate.month, targetDate.day, schedule.time.hour, schedule.time.minute);
+    final scheduleTime = DateTime(
+      targetDate.year,
+      targetDate.month,
+      targetDate.day,
+      schedule.time.hour,
+      schedule.time.minute,
+    );
     final gracePeriod = const Duration(hours: 1); // TODO: Make editable in settings
     if (scheduleTime.add(gracePeriod).isAfter(now)) return 'Upcoming';
     final history = await ref.read(driftServiceProvider).getDoseHistory(schedule.doseId ?? -1);
@@ -105,33 +111,39 @@ class _SchedulesInfoScreenState extends ConsumerState<SchedulesInfoScreen> {
     return now.add(Duration(days: daysDiff));
   }
 
+  int _weekdayToIndex(String day) {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return days.indexOf(day) + 1;
+  }
+
   Widget _buildScheduleRow(BuildContext context, WidgetRef ref, Schedule schedule) {
     return FutureBuilder<String>(
-        future: _getDoseStatus(schedule, ref),
-        builder: (context, snapshot) {
-          final status = snapshot.data ?? 'Upcoming';
-          final statusColor = {
-            'Taken': Colors.green,
-            'Missed': Colors.red,
-            'Postponed': Colors.orange,
-            'Cancelled': Colors.red,
-            'Upcoming': Colors.blue,
-          }[status]!;
-          return Card(
-            margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
-            child: ListTile(
-              title: Text(schedule.medicationName),
-              subtitle: Text(
-                'Time: ${DateFormat.jm().format(schedule.time)}, Days: ${schedule.days.join(', ')}\nStatus: $status',
-                style: TextStyle(color: statusColor),
-              ),
-              trailing: IconButton(
-                icon: const Icon(Icons.edit),
-                onPressed: () => Navigator.pushNamed(context, '/schedules/edit', arguments: schedule.id),
-              ),
+      future: _getDoseStatus(schedule, ref),
+      builder: (context, snapshot) {
+        final status = snapshot.data ?? 'Upcoming';
+        final statusColor = {
+          'Taken': Colors.green,
+          'Missed': Colors.red,
+          'Postponed': Colors.orange,
+          'Cancelled': Colors.red,
+          'Upcoming': Colors.blue,
+        }[status]!;
+        return Card(
+          margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+          child: ListTile(
+            title: Text(schedule.medicationName),
+            subtitle: Text(
+              'Time: ${DateFormat.jm().format(schedule.time)}, Days: ${schedule.days.join(', ')}\nStatus: $status',
+              style: TextStyle(color: statusColor),
             ),
-          );
-        });
+            trailing: IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: () => Navigator.pushNamed(context, '/schedules/edit', arguments: schedule.id),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildDayView(BuildContext context, WidgetRef ref, List<Schedule> schedules) {
@@ -145,26 +157,28 @@ class _SchedulesInfoScreenState extends ConsumerState<SchedulesInfoScreen> {
           DataColumn(label: Text('Status')),
         ],
         rows: todaySchedules.map((schedule) {
-          return DataRow(cells: [
-            DataCell(Text(schedule.medicationName)),
-            DataCell(Text(DateFormat.jm().format(schedule.time))),
-            DataCell(
-              FutureBuilder<String>(
-                future: _getDoseStatus(schedule, ref),
-                builder: (context, snapshot) {
-                  final status = snapshot.data ?? 'Upcoming';
-                  final statusColor = {
-                    'Taken': Colors.green,
-                    'Missed': Colors.red,
-                    'Postponed': Colors.orange,
-                    'Cancelled': Colors.red,
-                    'Upcoming': Colors.blue,
-                  }[status]!;
-                  return Text(status, style: TextStyle(color: statusColor));
-                },
+          return DataRow(
+            cells: [
+              DataCell(Text(schedule.medicationName)),
+              DataCell(Text(DateFormat.jm().format(schedule.time))),
+              DataCell(
+                FutureBuilder<String>(
+                  future: _getDoseStatus(schedule, ref),
+                  builder: (context, snapshot) {
+                    final status = snapshot.data ?? 'Upcoming';
+                    final statusColor = {
+                      'Taken': Colors.green,
+                      'Missed': Colors.red,
+                      'Postponed': Colors.orange,
+                      'Cancelled': Colors.red,
+                      'Upcoming': Colors.blue,
+                    }[status]!;
+                    return Text(status, style: TextStyle(color: statusColor));
+                  },
+                ),
               ),
-            ),
-          ]);
+            ],
+          );
         }).toList(),
       ),
     );
@@ -179,30 +193,31 @@ class _SchedulesInfoScreenState extends ConsumerState<SchedulesInfoScreen> {
           ...['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => DataColumn(label: Text(day))),
         ],
         rows: schedules.map((schedule) {
-          return DataRow(cells: [
-            DataCell(Text(schedule.medicationName)),
-            ...['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => DataCell(
-              schedule.days.contains(day)
-                  ? FutureBuilder<String>(
-                future: _getDoseStatus(schedule, ref),
-                builder: (context, snapshot) {
-                  final status = snapshot.data ?? 'Upcoming';
-                  final statusColor = {
-                    'Taken': Colors.green,
-                    'Missed': Colors.red,
-                    'Postponed': Colors.orange,
-                    'Cancelled': Colors.red,
-                    'Upcoming': Colors.blue,
-                  }[status]!;
-                  return Text(
-                    DateFormat.jm().format(schedule.time),
-                    style: TextStyle(color: statusColor),
-                  );
-                },
-              )
-                  : const Text('-'),
-            )),
-          ]);
+          return DataRow(
+            cells: [
+              DataCell(Text(schedule.medicationName)),
+              ...['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(
+                (day) => DataCell(
+                  schedule.days.contains(day)
+                      ? FutureBuilder<String>(
+                          future: _getDoseStatus(schedule, ref),
+                          builder: (context, snapshot) {
+                            final status = snapshot.data ?? 'Upcoming';
+                            final statusColor = {
+                              'Taken': Colors.green,
+                              'Missed': Colors.red,
+                              'Postponed': Colors.orange,
+                              'Cancelled': Colors.red,
+                              'Upcoming': Colors.blue,
+                            }[status]!;
+                            return Text(DateFormat.jm().format(schedule.time), style: TextStyle(color: statusColor));
+                          },
+                        )
+                      : const Text('-'),
+                ),
+              ),
+            ],
+          );
         }).toList(),
       ),
     );

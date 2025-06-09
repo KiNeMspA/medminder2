@@ -70,6 +70,7 @@ The `common/medication_matrix.dart` file is the cornerstone of MedMinder2’s lo
 - Update: Lightened navbar, added dose deletion, enhanced schedule alerts, fixed view statuses, and improved notification logging.
 - Update: Fixed app_theme.dart constant error using Color(0xFF9E9E9E) for navbar inactive buttons.
 - Update: Fixed LateInitializationError in notifications, lightened navbar, corrected Week view status, and enhanced schedule pre-selection.
+- Update: Fixed initializeTimeZones error, added _weekdayToIndex, lightened navbar, and verified pre-selection.
 
 ## Project Structure
 - **Flutter Code** (`lib/`):
