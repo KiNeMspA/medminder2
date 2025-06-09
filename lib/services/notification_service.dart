@@ -56,8 +56,11 @@ class NotificationService {
         ),
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
-      );
-      _logger.info('Scheduled notification: $id for $scheduled');
+      ).then((_) {
+        _logger.info('Successfully scheduled notification: ID=$id, Title=$title, Time=$scheduled, Days=$days');
+      }).catchError((e) {
+        _logger.severe('Failed to schedule notification: ID=$id, Error=$e');
+      });
     }
   }
 

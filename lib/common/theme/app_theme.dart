@@ -45,13 +45,16 @@ final appTheme = ThemeData(
     labelStyle: GoogleFonts.poppins(color: Colors.black54),
     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
   ),
+
   bottomNavigationBarTheme: const BottomNavigationBarThemeData(
     backgroundColor: Colors.white,
     selectedItemColor: Colors.blue,
-    unselectedItemColor: Colors.grey, // Changed to higher contrast
+    unselectedItemColor: Color(0xFF424242), // Explicit dark gray
     selectedLabelStyle: TextStyle(fontWeight: FontWeight.bold),
     unselectedLabelStyle: TextStyle(fontWeight: FontWeight.normal),
+    type: BottomNavigationBarType.fixed, // Ensure consistent rendering
   ),
+
   elevatedButtonTheme: ElevatedButtonThemeData(
     style: ElevatedButton.styleFrom(
       backgroundColor: const Color(0xFF6200EE),

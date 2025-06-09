@@ -4,7 +4,7 @@ import 'common/theme/app_theme.dart';
 import 'features/home/home_screen.dart';
 import 'features/medication/screens/medication_info_screen.dart';
 import 'features/medication/screens/medication_add_screen.dart';
-import 'features/medication/screens/medication_edit_screen.dart';
+import 'features/medication/screens/medication_overview_screen.dart';
 import 'features/dose/screens/dose_info_screen.dart';
 import 'features/dose/screens/dose_add_screen.dart';
 import 'features/dose/screens/dose_edit_screen.dart';
@@ -34,19 +34,15 @@ class MyApp extends StatelessWidget {
       routes: {
         '/medications/info': (context) => const MedicationsInfoScreen(),
         '/medications/add': (context) => const MedicationsAddScreen(),
-        '/medications/edit': (context) => MedicationsEditScreen(
-          medicationId: ModalRoute.of(context)!.settings.arguments as int,
-        ),
+        '/medications/edit': (context) =>
+            MedicationOverviewScreen(medicationId: ModalRoute.of(context)!.settings.arguments as int),
         '/doses/info': (context) => const DosesInfoScreen(),
         '/doses/add': (context) => const DosesAddScreen(),
-        '/doses/edit': (context) => DosesEditScreen(
-          doseId: ModalRoute.of(context)!.settings.arguments as int,
-        ),
+        '/doses/edit': (context) => DosesEditScreen(doseId: ModalRoute.of(context)!.settings.arguments as int),
         '/schedules/info': (context) => const SchedulesInfoScreen(),
         '/schedules/add': (context) => const SchedulesAddScreen(),
-        '/schedules/edit': (context) => SchedulesEditScreen(
-          scheduleId: ModalRoute.of(context)!.settings.arguments as int,
-        ),
+        '/schedules/edit': (context) =>
+            SchedulesEditScreen(scheduleId: ModalRoute.of(context)!.settings.arguments as int),
       },
     );
   }
@@ -62,12 +58,7 @@ class MainScaffold extends StatefulWidget {
 class _MainScaffoldState extends State<MainScaffold> {
   int _selectedIndex = 0;
 
-  static const List<Widget> _screens = [
-    HomeScreen(),
-    MedicationsInfoScreen(),
-    DosesInfoScreen(),
-    SchedulesInfoScreen(),
-  ];
+  static const List<Widget> _screens = [HomeScreen(), MedicationsInfoScreen(), SchedulesInfoScreen()];
 
   void _onItemTapped(int index) {
     setState(() {
@@ -83,7 +74,6 @@ class _MainScaffoldState extends State<MainScaffold> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.medication), label: 'Medications'),
-          BottomNavigationBarItem(icon: Icon(Icons.schedule), label: 'Doses'),
           BottomNavigationBarItem(icon: Icon(Icons.calendar_today), label: 'Schedules'),
         ],
         currentIndex: _selectedIndex,

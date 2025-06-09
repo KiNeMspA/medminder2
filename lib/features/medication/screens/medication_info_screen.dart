@@ -44,19 +44,8 @@ class MedicationsInfoScreen extends ConsumerWidget {
                 subtitle: Text(
                   '${med.form} - ${Utils.removeTrailingZeros(med.concentration)}${med.concentrationUnit}, Stock: ${Utils.removeTrailingZeros(med.stockQuantity)}',
                 ),
-                trailing: IconButton(
-                  icon: const Icon(Icons.edit),
-                  onPressed: () => Navigator.pushNamed(
-                    context,
-                    '/medications/edit',
-                    arguments: med.id,
-                  ),
-                ),
-                onTap: () => Navigator.pushNamed(
-                  context,
-                  '/medications/edit',
-                  arguments: med.id,
-                ),
+                trailing: null,
+                onTap: () => Navigator.pushNamed(context, '/medications/edit', arguments: med.id),
               ),
             );
           },
