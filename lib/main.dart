@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'common/theme/app_theme.dart';
+import 'features/debug/screens/debug_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/medication/screens/medication_info_screen.dart';
 import 'features/medication/screens/medication_add_screen.dart';
@@ -17,8 +18,14 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await NotificationService().initialize();
-  runApp(const ProviderScope(child: MyApp()));
+  final notificationService = NotificationService();
+  await notificationService.initialize();
+  runApp(ProviderScope(
+    overrides: [
+      notificationServiceProvider.overrideWithValue(notificationService),
+    ],
+    child: const MyApp(),
+  ));
 }
 
 class MyApp extends StatelessWidget {
@@ -43,6 +50,7 @@ class MyApp extends StatelessWidget {
         '/schedules/add': (context) => const SchedulesAddScreen(),
         '/schedules/edit': (context) =>
             SchedulesEditScreen(scheduleId: ModalRoute.of(context)!.settings.arguments as int),
+        '/debug': (context) => const DebugScreen(),
       },
     );
   }

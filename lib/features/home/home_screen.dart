@@ -73,6 +73,12 @@ class HomeScreen extends ConsumerWidget {
             ),
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.bug_report),
+            onPressed: () => Navigator.pushNamed(context, '/debug'),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),

@@ -36,25 +36,7 @@ class _SchedulesAddScreenState extends ConsumerState<SchedulesAddScreen> {
     _logger.info('Initializing SchedulesAddScreen with medicationId: ${widget.medicationId}');
     if (widget.medicationId != null) {
       _selectedMedicationId = widget.medicationId;
-      _loadMedications().then((_) {
-        final med = _medications.firstWhere(
-              (m) => m.id == widget.medicationId!,
-          orElse: () => Medication(id: -1, name: 'Not Found', concentration: 0, concentrationUnit: '', stockQuantity: 0, form: ''),
-        );
-        if (med.id != -1) {
-          setState(() {
-            _selectedMedicationId = med.id;
-            _selectedMedicationName = med.name;
-            _logger.info('Pre-selected medication: ${med.name} (ID: ${med.id})');
-          });
-          _loadDoses();
-        } else {
-          _logger.severe('Medication ID ${widget.medicationId} not found');
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Medication not found')),
-          );
-        }
-      });
+      _loadMedications();
     } else {
       _loadMedications();
     }
@@ -75,15 +57,9 @@ class _SchedulesAddScreenState extends ConsumerState<SchedulesAddScreen> {
     });
     if (_selectedMedicationId != null) {
       final med = _medications.firstWhere(
-            (m) => m.id == _selectedMedicationId!,
-        orElse: () => Medication(
-          id: -1,
-          name: 'Not Found',
-          concentration: 0,
-          concentrationUnit: '',
-          stockQuantity: 0,
-          form: '',
-        ),
+        (m) => m.id == _selectedMedicationId!,
+        orElse: () =>
+            Medication(id: -1, name: 'Not Found', concentration: 0, concentrationUnit: '', stockQuantity: 0, form: ''),
       );
       if (med.id != -1) {
         setState(() {
@@ -93,24 +69,9 @@ class _SchedulesAddScreenState extends ConsumerState<SchedulesAddScreen> {
         await _loadDoses();
       } else {
         _logger.severe('Medication ID $_selectedMedicationId not found');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Medication not found')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Medication not found')));
       }
     }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _logger.info('Initializing SchedulesAddScreen with medicationId: ${widget.medicationId}');
-    if (widget.medicationId != null) {
-      _selectedMedicationId = widget.medicationId;
-      _loadMedications();
-    } else {
-      _loadMedications();
-    }
-    _nameController.addListener(() => setState(() {}));
   }
 
   Future<void> _loadDoses() async {
@@ -160,22 +121,37 @@ class _SchedulesAddScreenState extends ConsumerState<SchedulesAddScreen> {
       _logger.info('Saving schedule: $schedule');
       final scheduleId = await ref.read(driftServiceProvider).addSchedule(schedule);
       if (_notificationsEnabled) {
-        await ref
-            .read(notificationServiceProvider)
-            .scheduleNotification(
-              id: notificationId,
-              title: 'MedMinder: $_selectedMedicationName',
-              body: 'Time for your dose!',
-              scheduledTime: DateTime.now().copyWith(hour: _selectedTime.hour, minute: _selectedTime.minute),
-              days: _selectedDays,
-            );
-        _logger.info('Scheduled notification for schedule ID: $scheduleId');
+        try {
+          await ref.read(notificationServiceProvider).scheduleNotification(
+            id: notificationId,
+            title: 'MedMinder: $_selectedMedicationName',
+            body: _selectedDoseId != null
+                ? 'Time for your ${_doses.firstWhere((dose) => dose.id == _selectedDoseId).amount} ${_doses.firstWhere((dose) => dose.id == _selectedDoseId).unit} dose!'
+                : 'Time for your dose!',
+            scheduledTime: DateTime.now().copyWith(hour: _selectedTime.hour, minute: _selectedTime.minute),
+            days: _selectedDays,
+          );
+          _logger.info('Scheduled notification for schedule ID: $scheduleId');
+        } catch (e, stack) {
+          _logger.severe('Notification scheduling failed: $e, Stack: $stack');
+          String errorMessage = 'Schedule saved, but notification scheduling failed.';
+          if (e.toString().contains('Notification permission')) {
+            errorMessage += ' Please enable notifications in Settings > Apps > MedMinder > Notifications.';
+          } else if (e.toString().contains('Exact alarm permission')) {
+            errorMessage += ' Please enable exact alarms in Settings > Apps > MedMinder > Alarms & Reminders.';
+          } else if (e.toString().contains('No valid days')) {
+            errorMessage += ' Invalid days selected.';
+          } else {
+            errorMessage += ' Error: $e. Check logs for details.';
+          }
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMessage)));
+        }
       }
       ref.invalidate(schedulesProvider);
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Schedule added')));
     } catch (e, stack) {
-      _logger.severe('Error adding schedule: $e\n$stack');
+      _logger.severe('Error adding schedule: $e, Stack: $stack');
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error adding schedule: $e')));
     }
   }
