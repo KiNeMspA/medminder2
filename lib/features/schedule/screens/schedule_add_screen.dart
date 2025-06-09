@@ -33,18 +33,22 @@ class _SchedulesAddScreenState extends ConsumerState<SchedulesAddScreen> {
   @override
   void initState() {
     super.initState();
-    _loadMedications();
-    _nameController.addListener(() => setState(() {}));
-
     if (widget.medicationId != null) {
       _selectedMedicationId = widget.medicationId;
       _loadMedications().then((_) {
-        final med = _medications.firstWhere((m) => m.id == widget.medicationId);
-        setState(() {
-          _selectedMedicationName = med.name;
-        });
+        final med = _medications.firstWhere((m) => m.id == widget.medicationId, orElse: () => Medication(id: -1, name: '', concentration: 0, concentrationUnit: '', stockQuantity: 0, form: ''));
+        if (med.id != -1) {
+          setState(() {
+            _selectedMedicationId = med.id;
+            _selectedMedicationName = med.name;
+            _loadDoses();
+          });
+        }
       });
+    } else {
+      _loadMedications();
     }
+    _nameController.addListener(() => setState(() {}));
   }
 
   @override

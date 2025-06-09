@@ -92,7 +92,41 @@ class MedicationOverviewScreen extends ConsumerWidget {
                         child: ListTile(
                           title: Text(dose.name ?? 'Unnamed'),
                           subtitle: Text('${Utils.removeTrailingZeros(dose.amount)} ${dose.unit}'),
-                          trailing: const Icon(Icons.edit),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit),
+                                onPressed: () => Navigator.pushNamed(context, '/doses/edit', arguments: dose.id),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete),
+                                onPressed: () async {
+                                  final confirm = await showDialog<bool>(
+                                    context: context,
+                                    builder: (context) => AlertDialog(
+                                      title: const Text('Delete Dose'),
+                                      content: const Text('Are you sure you want to delete this dose?'),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(context, false),
+                                          child: const Text('Cancel'),
+                                        ),
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(context, true),
+                                          child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                  if (confirm == true) {
+                                    await ref.read(driftServiceProvider).deleteDose(dose.id);
+                                    ref.invalidate(allDosesProvider);
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
                           onTap: () => Navigator.pushNamed(context, '/doses/edit', arguments: dose.id),
                         ),
                       )).toList(),
@@ -119,8 +153,28 @@ class MedicationOverviewScreen extends ConsumerWidget {
                   onPressed: () async {
                     final doses = await ref.read(driftServiceProvider).getDoses(medicationId);
                     if (doses.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Please add a dose first')),
+                      await showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('No Doses Available'),
+                          content: const Text('You must add at least one dose before creating a schedule.'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('OK'),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => DosesAddScreen(medicationId: medicationId)),
+                                );
+                              },
+                              child: const Text('Add Dose'),
+                            ),
+                          ],
+                        ),
                       );
                       return;
                     }

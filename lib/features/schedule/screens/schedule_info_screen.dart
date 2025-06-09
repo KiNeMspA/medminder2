@@ -139,13 +139,26 @@ class _SchedulesInfoScreenState extends ConsumerState<SchedulesInfoScreen> {
           DataColumn(label: Text('Status')),
         ],
         rows: todaySchedules.map((schedule) {
-          return DataRow(
-            cells: [
-              DataCell(Text(schedule.medicationName)),
-              DataCell(Text(DateFormat.jm().format(schedule.time))),
-              DataCell(Text('Upcoming')), // Placeholder
-            ],
-          );
+          return DataRow(cells: [
+            DataCell(Text(schedule.medicationName)),
+            DataCell(Text(DateFormat.jm().format(schedule.time))),
+            DataCell(
+              FutureBuilder<String>(
+                future: _getDoseStatus(schedule, ref),
+                builder: (context, snapshot) {
+                  final status = snapshot.data ?? 'Upcoming';
+                  final statusColor = {
+                    'Taken': Colors.green,
+                    'Missed': Colors.red,
+                    'Postponed': Colors.orange,
+                    'Cancelled': Colors.red,
+                    'Upcoming': Colors.blue,
+                  }[status]!;
+                  return Text(status, style: TextStyle(color: statusColor));
+                },
+              ),
+            ),
+          ]);
         }).toList(),
       ),
     );
@@ -160,16 +173,30 @@ class _SchedulesInfoScreenState extends ConsumerState<SchedulesInfoScreen> {
           ...['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => DataColumn(label: Text(day))),
         ],
         rows: schedules.map((schedule) {
-          return DataRow(
-            cells: [
-              DataCell(Text(schedule.medicationName)),
-              ...['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(
-                (day) => DataCell(
-                  schedule.days.contains(day) ? Text(DateFormat.jm().format(schedule.time)) : const Text('-'),
-                ),
-              ),
-            ],
-          );
+          return DataRow(cells: [
+            DataCell(Text(schedule.medicationName)),
+            ...['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => DataCell(
+              schedule.days.contains(day)
+                  ? FutureBuilder<String>(
+                future: _getDoseStatus(schedule, ref),
+                builder: (context, snapshot) {
+                  final status = snapshot.data ?? 'Upcoming';
+                  final statusColor = {
+                    'Taken': Colors.green,
+                    'Missed': Colors.red,
+                    'Postponed': Colors.orange,
+                    'Cancelled': Colors.red,
+                    'Upcoming': Colors.blue,
+                  }[status]!;
+                  return Text(
+                    DateFormat.jm().format(schedule.time),
+                    style: TextStyle(color: statusColor),
+                  );
+                },
+              )
+                  : const Text('-'),
+            )),
+          ]);
         }).toList(),
       ),
     );

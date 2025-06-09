@@ -9,8 +9,7 @@ final notificationServiceProvider = Provider<NotificationService>((ref) {
 });
 
 class NotificationService {
-  final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
-  FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
   final Logger _logger = Logger('NotificationService');
 
   Future<void> initialize() async {
@@ -19,7 +18,8 @@ class NotificationService {
     const iOS = DarwinInitializationSettings();
     const settings = InitializationSettings(android: android, iOS: iOS);
     await _flutterLocalNotificationsPlugin.initialize(settings);
-    final androidPlugin = _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    final androidPlugin = _flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
     await androidPlugin?.requestNotificationsPermission();
   }
 
@@ -43,22 +43,24 @@ class NotificationService {
         scheduledTime.hour,
         scheduledTime.minute,
       );
-      await _flutterLocalNotificationsPlugin.zonedSchedule(
-        id.hashCode,
-        title,
-        body,
-        scheduled,
-        const NotificationDetails(
-          android: AndroidNotificationDetails('medminder', 'MedMinder Notifications'),
-          iOS: DarwinNotificationDetails(),
-        ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
-      ).then((_) {
+      _logger.fine('Scheduling notification: ID=$id, Title=$title, Time=$scheduled, Days=$days');
+      try {
+        await _flutterLocalNotificationsPlugin.zonedSchedule(
+          id.hashCode,
+          title,
+          body,
+          scheduled,
+          const NotificationDetails(
+            android: AndroidNotificationDetails('medminder', 'MedMinder Notifications', importance: Importance.max, priority: Priority.high),
+            iOS: DarwinNotificationDetails(),
+          ),
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+        );
         _logger.info('Successfully scheduled notification: ID=$id, Title=$title, Time=$scheduled, Days=$days');
-      }).catchError((e) {
+      } catch (e) {
         _logger.severe('Failed to schedule notification: ID=$id, Error=$e');
-      });
+      }
     }
   }
 

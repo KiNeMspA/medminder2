@@ -67,6 +67,7 @@ The `common/medication_matrix.dart` file is the cornerstone of MedMinder2’s lo
 - Update: Added medicationId to DosesAddScreen for pre-selection in MedicationOverviewScreen.
 - Update: Fixed amount getter error in DosesAddScreen by using _amountController.text.
 - Update: Fixed syntax error in SchedulesInfoScreen and added getDoseHistory to AppDatabase.
+- Update: Lightened navbar, added dose deletion, enhanced schedule alerts, fixed view statuses, and improved notification logging.
 
 ## Project Structure
 - **Flutter Code** (`lib/`):
