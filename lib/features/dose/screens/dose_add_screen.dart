@@ -8,7 +8,8 @@ import '../../../services/drift_service.dart';
 import '../../medication/constants/medication_form_constants.dart';
 
 class DosesAddScreen extends ConsumerStatefulWidget {
-  const DosesAddScreen({super.key});
+  final int? medicationId;
+  const DosesAddScreen({super.key, this.medicationId});
 
   @override
   ConsumerState<DosesAddScreen> createState() => _DosesAddScreenState();
@@ -26,7 +27,18 @@ class _DosesAddScreenState extends ConsumerState<DosesAddScreen> {
   @override
   void initState() {
     super.initState();
-    _loadMedications();
+    if (widget.medicationId != null) {
+      _selectedMedicationId = widget.medicationId;
+      _loadMedications().then((_) {
+        final med = _medications.firstWhere((m) => m.id == widget.medicationId);
+        setState(() {
+          _selectedMedicationName = med.name;
+          _updateSummary();
+        });
+      });
+    } else {
+      _loadMedications();
+    }
     _amountController.addListener(_updateSummary);
   }
 
@@ -68,10 +80,9 @@ class _DosesAddScreenState extends ConsumerState<DosesAddScreen> {
   void _saveDose() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final amount = double.tryParse(_amountController.text) ?? 0;
     if (_selectedMedicationId == null || amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a medication and enter a valid amount')),
+        const SnackBar(content: Text('Please enter a valid amount')),
       );
       return;
     }
