@@ -80,6 +80,7 @@ class _DosesAddScreenState extends ConsumerState<DosesAddScreen> {
   void _saveDose() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final amount = double.tryParse(_amountController.text) ?? 0;
     if (_selectedMedicationId == null || amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a valid amount')),
