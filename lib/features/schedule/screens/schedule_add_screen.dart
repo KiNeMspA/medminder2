@@ -33,16 +33,26 @@ class _SchedulesAddScreenState extends ConsumerState<SchedulesAddScreen> {
   @override
   void initState() {
     super.initState();
+    _logger.info('Initializing SchedulesAddScreen with medicationId: ${widget.medicationId}');
     if (widget.medicationId != null) {
       _selectedMedicationId = widget.medicationId;
       _loadMedications().then((_) {
-        final med = _medications.firstWhere((m) => m.id == widget.medicationId, orElse: () => Medication(id: -1, name: '', concentration: 0, concentrationUnit: '', stockQuantity: 0, form: ''));
+        final med = _medications.firstWhere(
+              (m) => m.id == widget.medicationId!,
+          orElse: () => Medication(id: -1, name: 'Not Found', concentration: 0, concentrationUnit: '', stockQuantity: 0, form: ''),
+        );
         if (med.id != -1) {
           setState(() {
             _selectedMedicationId = med.id;
             _selectedMedicationName = med.name;
-            _loadDoses();
+            _logger.info('Pre-selected medication: ${med.name} (ID: ${med.id})');
           });
+          _loadDoses();
+        } else {
+          _logger.severe('Medication ID ${widget.medicationId} not found');
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Medication not found')),
+          );
         }
       });
     } else {

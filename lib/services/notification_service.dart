@@ -12,8 +12,12 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
   final Logger _logger = Logger('NotificationService');
 
+  late tz.Location _local;
+
   Future<void> initialize() async {
     _logger.info('Initializing notification service');
+    await tz.initializeTimeZones();
+    _local = tz.getLocation('Australia/Sydney'); // Set to AEST
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iOS = DarwinInitializationSettings();
     const settings = InitializationSettings(android: android, iOS: iOS);
@@ -51,7 +55,12 @@ class NotificationService {
           body,
           scheduled,
           const NotificationDetails(
-            android: AndroidNotificationDetails('medminder', 'MedMinder Notifications', importance: Importance.max, priority: Priority.high),
+            android: AndroidNotificationDetails(
+              'medminder',
+              'MedMinder Notifications',
+              importance: Importance.max,
+              priority: Priority.high,
+            ),
             iOS: DarwinNotificationDetails(),
           ),
           androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,

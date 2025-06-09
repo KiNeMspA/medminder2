@@ -82,19 +82,27 @@ class _SchedulesInfoScreenState extends ConsumerState<SchedulesInfoScreen> {
     }
   }
 
-  Future<String> _getDoseStatus(Schedule schedule, WidgetRef ref) async {
+  Future<String> _getDoseStatus(Schedule schedule, WidgetRef ref, [String? day]) async {
     final now = DateTime.now();
+    final targetDay = day != null ? _weekdayToIndex(day) : now.weekday;
+    final isScheduled = schedule.frequency == 'Daily' || schedule.days.contains(day ?? _weekdayToString(now.weekday));
+    if (!isScheduled) return 'Upcoming';
+    final targetDate = _getDateForDay(now, targetDay);
+    final scheduleTime = DateTime(targetDate.year, targetDate.month, targetDate.day, schedule.time.hour, schedule.time.minute);
     final gracePeriod = const Duration(hours: 1); // TODO: Make editable in settings
-    final scheduleTimeToday = DateTime(now.year, now.month, now.day, schedule.time.hour, schedule.time.minute);
-    final isToday = schedule.frequency == 'Daily' || schedule.days.contains(_weekdayToString(now.weekday));
-    if (!isToday) return 'Upcoming';
-    if (scheduleTimeToday.add(gracePeriod).isAfter(now)) return 'Upcoming';
+    if (scheduleTime.add(gracePeriod).isAfter(now)) return 'Upcoming';
     final history = await ref.read(driftServiceProvider).getDoseHistory(schedule.doseId ?? -1);
-    if (history.any((h) => h.takenAt.isAfter(scheduleTimeToday.subtract(const Duration(minutes: 1))))) {
+    if (history.any((h) => h.takenAt.isAfter(scheduleTime.subtract(const Duration(minutes: 1))))) {
       return 'Taken';
     }
     // Placeholder: Check for Postponed/Cancelled
     return 'Missed';
+  }
+
+  DateTime _getDateForDay(DateTime now, int targetDay) {
+    final currentDay = now.weekday;
+    final daysDiff = (targetDay - currentDay + 7) % 7;
+    return now.add(Duration(days: daysDiff));
   }
 
   Widget _buildScheduleRow(BuildContext context, WidgetRef ref, Schedule schedule) {
