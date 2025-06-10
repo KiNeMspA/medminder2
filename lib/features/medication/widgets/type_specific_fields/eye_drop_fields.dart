@@ -3,18 +3,20 @@ import '../../../../common/medication_matrix.dart';
 import '../../constants/medication_form_constants.dart';
 import '../medication_form_field.dart';
 
-class DropsFields extends StatelessWidget {
+class EyeDropFields extends StatelessWidget {
   final TextEditingController concentrationController;
   final TextEditingController volumeController;
   final TextEditingController unitController;
+  final String? selectedSubType;
   final ValueChanged<String?> onUnitChanged;
   final double maxWidth;
 
-  const DropsFields({
+  const EyeDropFields({
     super.key,
     required this.concentrationController,
     required this.volumeController,
     required this.unitController,
+    required this.selectedSubType,
     required this.onUnitChanged,
     required this.maxWidth,
   });
@@ -44,8 +46,8 @@ class DropsFields extends StatelessWidget {
               flex: 3,
               child: MedicationFormField(
                 controller: concentrationController,
-                label: 'Concentration',
-                helperText: 'Enter concentration (e.g., mg/mL)',
+                label: MedicationFormConstants.concentrationLabel,
+                helperText: MedicationFormConstants.getConcentrationHelpText(MedicationType.drops, selectedSubType),
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 validator: (value) => value!.isEmpty
                     ? MedicationFormConstants.concentrationRequiredMessage
@@ -62,7 +64,7 @@ class DropsFields extends StatelessWidget {
               flex: 2,
               child: DropdownButtonFormField<String>(
                 value: unitController.text,
-                items: ['mg/mL', 'mcg/mL']
+                items: MedicationFormConstants.getConcentrationUnits(MedicationType.drops, selectedSubType)
                     .map((unit) => DropdownMenuItem(value: unit, child: Text(unit)))
                     .toList(),
                 onChanged: onUnitChanged,
@@ -84,11 +86,11 @@ class DropsFields extends StatelessWidget {
         const SizedBox(height: MedicationFormConstants.fieldSpacing),
         MedicationFormField(
           controller: volumeController,
-          label: 'Total Volume',
-          helperText: 'Enter total volume (mL)',
+          label: MedicationFormConstants.quantityLabel,
+          helperText: MedicationFormConstants.getQuantityHelpText(MedicationType.drops, selectedSubType),
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           validator: (value) => value!.isEmpty
-              ? 'Volume required'
+              ? MedicationFormConstants.quantityRequiredMessage
               : double.tryParse(value) == null
               ? MedicationFormConstants.invalidNumberMessage
               : double.parse(value) < 0.01 || double.parse(value) > 999
