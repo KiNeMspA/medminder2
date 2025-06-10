@@ -74,7 +74,8 @@ The `common/medication_matrix.dart` file is the cornerstone of MedMinder2’s lo
 - Update: Fixed LateInitializationError in NotificationService, added _weekdayToIndex, lightened navbar, corrected Week view status, and verified medication pre-selection.
 - Update: Added debug button to HomeScreen AppBar for navigation to /debug route.
 - - Update: Replaced MedicationsEditScreen with MedicationOverviewScreen, renamed route to /medications-overview, and applied Figma-style UI with animations.
-
+- Fixed animation errors in MedicationOverviewScreen, ensuring smooth Figma-style transitions.
+- 
 ## Project Structure
 - **Flutter Code** (`lib/`):
     - `common/`:

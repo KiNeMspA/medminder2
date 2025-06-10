@@ -211,27 +211,309 @@ class MedicationOverviewScreen extends ConsumerWidget {
                         verticalOffset: 50,
                         child: widget,
                       ),
-                ),
-                children: [
-                  // Medication Details
-                  const Text(
-                    'Medication Details',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
-                  ),
-                  const SizedBox(height: 12),
-                  Card(
-                    elevation: 4,
-                    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
-                    child: Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        borderRadius: const BorderRadius.all(Radius.circular(16)),
-                        gradient: LinearGradient(
-                          colors: [Colors.grey[50]!, Colors.white],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
+                  children: [
+                    // Medication Details
+                    const Text(
+                      'Medication Details',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+                    ),
+                    const SizedBox(height: 12),
+                    Card(
+                      elevation: 4,
+                      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
+                      child: Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          borderRadius: const BorderRadius.all(Radius.circular(16)),
+                          gradient: LinearGradient(
+                            colors: [Colors.grey[50]!, Colors.white],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildListTile(
+                                context,
+                                title: 'Name: ${med.name}',
+                                trailing: const Icon(Icons.edit, size: 24, color: Colors.blue),
+                                onTap: () => _showEditDialog(context, ref, med, 'name', 'Medication Name', med.name),
+                              ),
+                              const Divider(height: 8),
+                              _buildListTile(
+                                context,
+                                title: 'Type: ${med.form}',
+                                trailing: const Icon(Icons.lock, size: 24, color: Colors.grey),
+                                onTap: () => _showTypeWarning(context),
+                              ),
+                              const Divider(height: 8),
+                              _buildListTile(
+                                context,
+                                title:
+                                'Strength: ${Utils.removeTrailingZeros(med.concentration)}${med
+                                    .concentrationUnit} per ${med.form == 'Tablet' ? 'Tablet' : med.form == 'Capsule'
+                                    ? 'Capsule'
+                                    : 'mL'}',
+                                trailing: const Icon(Icons.edit, size: 24, color: Colors.blue),
+                                onTap: () =>
+                                    _showEditDialog(context, ref, med, 'concentration', 'Concentration',
+                                        med.concentration.toString()),
+                              ),
+                              const Divider(height: 8),
+                              _buildListTile(
+                                context,
+                                title: 'Unit: ${med.concentrationUnit}',
+                                trailing: const Icon(Icons.edit, size: 24, color: Colors.blue),
+                                onTap: () =>
+                                    _showEditDialog(
+                                      context,
+                                      ref,
+                                      med,
+                                      'concentrationUnit',
+                                      'Concentration Unit',
+                                      med.concentrationUnit,
+                                      dropdownOptions: MedicationFormConstants.getConcentrationUnits(type, subType),
+                                    ),
+                              ),
+                              const Divider(height: 8),
+                              _buildListTile(
+                                context,
+                                title: 'Stock: ${Utils.removeTrailingZeros(med.stockQuantity)} $medQtyUnit',
+                                trailing: const Icon(Icons.edit, size: 24, color: Colors.blue),
+                                onTap: () =>
+                                    _showEditDialog(context, ref, med, 'stockQuantity', 'Stock Quantity',
+                                        med.stockQuantity.toString()),
+                              ),
+                              const Divider(height: 8),
+                              _buildListTile(
+                                context,
+                                title:
+                                'Total: ${Utils.removeTrailingZeros(med.concentration * med.stockQuantity)}${med
+                                    .concentrationUnit}',
+                                textStyle: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Theme
+                                      .of(context)
+                                      .colorScheme
+                                      .primary,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
+                    ),
+                    const SizedBox(height: 16),
+                    // Doses
+                    const Text(
+                      'Doses',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+                    ),
+                    const SizedBox(height: 12),
+                    dosesAsync.when(
+                      data: (doses) {
+                        final medDoses = doses.where((dose) => dose.medicationId == medicationId).toList();
+                        return medDoses.isEmpty
+                            ? const Card(
+                          elevation: 2,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
+                          child: Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Text('No doses added', style: TextStyle(fontSize: 16, color: Colors.grey)),
+                          ),
+                        )
+                            : Column(
+                          children: medDoses
+                              .asMap()
+                              .entries
+                              .map((entry) {
+                            final index = entry.key;
+                            final dose = entry.value;
+                            return AnimationConfiguration.staggeredList(
+                              position: index,
+                              duration: const Duration(milliseconds: 300),
+                              child: SlideAnimation(
+                                verticalOffset: 20,
+                                child: Card(
+                                  elevation: 2,
+                                  shape: const RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.all(Radius.circular(16))),
+                                  margin: const EdgeInsets.symmetric(vertical: 4),
+                                  child: ListTile(
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    title: Text(
+                                      dose.name ?? 'Unnamed',
+                                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                                    ),
+                                    subtitle: Text(
+                                      '${Utils.removeTrailingZeros(dose.amount)} ${dose.unit}',
+                                      style: const TextStyle(fontSize: 14, color: Colors.grey),
+                                    ),
+                                    trailing: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(Icons.edit, color: Colors.blue),
+                                          onPressed: () =>
+                                              Navigator.pushNamed(context, '/doses/edit', arguments: dose.id),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.delete, color: Colors.red),
+                                          onPressed: () async {
+                                            final confirm = await showDialog<bool>(
+                                              context: context,
+                                              builder: (context) =>
+                                                  StandardDialog(
+                                                    title: 'Delete Dose',
+                                                    content: 'Are you sure you want to delete this dose?',
+                                                    onConfirm: () => Navigator.pop(context, true),
+                                                    onCancel: () => Navigator.pop(context, false),
+                                                  ),
+                                            );
+                                            if (confirm == true) {
+                                              await ref.read(driftServiceProvider).deleteDose(dose.id);
+                                              ref.invalidate(allDosesProvider);
+                                            }
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                    onTap: () => Navigator.pushNamed(context, '/doses/edit', arguments: dose.id),
+                                  ),
+                                ),
+                              )
+                              ,
+                            );
+                          }).toList(),
+                        );
+                      },
+                      loading: () => const Center(child: CircularProgressIndicator()),
+                      error: (e, _) =>
+                          Text('Error: $e', style: TextStyle(color: Theme
+                              .of(context)
+                              .colorScheme
+                              .error)),
+                    ),
+                    const SizedBox(height: 8),
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add Dose', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                      onPressed: () =>
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => DosesAddScreen(medicationId: medicationId)),
+                          ).then((_) => ref.invalidate(allDosesProvider)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme
+                            .of(context)
+                            .colorScheme
+                            .primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                        elevation: 4,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // Upcoming Doses
+                    const Text(
+                      'Upcoming Doses',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+                    ),
+                    const SizedBox(height: 12),
+                    schedulesAsync.when(
+                      data: (schedules) {
+                        final upcoming = schedules
+                            .where((s) => s.medicationId == medicationId && s.time.isAfter(DateTime.now()))
+                            .take(3)
+                            .toList();
+                        return upcoming.isEmpty
+                            ? const Card(
+                          elevation: 2,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
+                          child: Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Text('No upcoming doses', style: TextStyle(fontSize: 16, color: Colors.grey)),
+                          ),
+                        )
+                            : Column(
+                          children: upcoming
+                              .asMap()
+                              .entries
+                              .map((entry) {
+                            final index = entry.key;
+                            final schedule = entry.value;
+                            return AnimationConfiguration.staggeredList(
+                              position: index,
+                              duration: const Duration(milliseconds: 300),
+                              child: SlideAnimation(
+                                verticalOffset: 20,
+                                child: Card(
+                                  elevation: 2,
+                                  shape: const RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.all(Radius.circular(16))),
+                                  margin: const EdgeInsets.symmetric(vertical: 4),
+                                  child: ListTile(
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    title: Text(
+                                      schedule.medicationName,
+                                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                                    ),
+                                    subtitle: Text(
+                                      'Time: ${DateFormat.jm().format(schedule.time)}',
+                                      style: const TextStyle(fontSize: 14, color: Colors.grey),
+                                    ),
+                                    trailing: const Icon(Icons.schedule, color: Colors.teal),
+                                  ),
+                                ),
+                            )
+                            ,
+                            );
+                          }).toList(),
+                        );
+                      },
+                      loading: () => const Center(child: CircularProgressIndicator()),
+                      error: (e, _) =>
+                          Text('Error: $e', style: TextStyle(color: Theme
+                              .of(context)
+                              .colorScheme
+                              .error)),
+                    ),
+                    const SizedBox(height: 16),
+                    // Schedule Calendar
+                    const Text(
+                      'Schedule Calendar',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+                    ),
+                    const SizedBox(height: 12),
+                    Card(
+                      elevation: 4,
+                      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
+                      child: Container(
+                        height: 200,
+                        padding: const EdgeInsets.all(16),
+                        child: const Center(
+                          child: Text(
+                            'Interactive calendar coming soon...',
+                            style: TextStyle(fontSize: 16, color: Colors.grey),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // Stock Management
+                    const Text(
+                      'Stock Management',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+                    ),
+                    const SizedBox(height: 12),
+                    Card(
+                      elevation: 4,
+                      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
                       child: Padding(
                         padding: const EdgeInsets.all(16),
                         child: Column(
@@ -239,408 +521,124 @@ class MedicationOverviewScreen extends ConsumerWidget {
                           children: [
                             _buildListTile(
                               context,
-                              title: 'Name: ${med.name}',
-                              trailing: const Icon(Icons.edit, size: 24, color: Colors.blue),
-                              onTap: () => _showEditDialog(context, ref, med, 'name', 'Medication Name', med.name),
-                            ),
-                            const Divider(height: 8),
-                            _buildListTile(
-                              context,
-                              title: 'Type: ${med.form}',
-                              trailing: const Icon(Icons.lock, size: 24, color: Colors.grey),
-                              onTap: () => _showTypeWarning(context),
-                            ),
-                            const Divider(height: 8),
-                            _buildListTile(
-                              context,
-                              title:
-                              'Strength: ${Utils.removeTrailingZeros(med.concentration)}${med
-                                  .concentrationUnit} per ${med.form == 'Tablet' ? 'Tablet' : med.form == 'Capsule'
-                                  ? 'Capsule'
-                                  : 'mL'}',
-                              trailing: const Icon(Icons.edit, size: 24, color: Colors.blue),
+                              title: 'Refill Stock',
+                              trailing: const Icon(Icons.add_circle, size: 24, color: Colors.green),
                               onTap: () =>
-                                  _showEditDialog(context, ref, med, 'concentration', 'Concentration',
-                                      med.concentration.toString()),
-                            ),
-                            const Divider(height: 8),
-                            _buildListTile(
-                              context,
-                              title: 'Unit: ${med.concentrationUnit}',
-                              trailing: const Icon(Icons.edit, size: 24, color: Colors.blue),
-                              onTap: () =>
-                                  _showEditDialog(
-                                    context,
-                                    ref,
-                                    med,
-                                    'concentrationUnit',
-                                    'Concentration Unit',
-                                    med.concentrationUnit,
-                                    dropdownOptions: MedicationFormConstants.getConcentrationUnits(type, subType),
+                                  showGeneralDialog(
+                                    context: context,
+                                    barrierDismissible: true,
+                                    barrierLabel: 'Dismiss',
+                                    transitionDuration: const Duration(milliseconds: 300),
+                                    transitionBuilder: (context, anim1, anim2, child) {
+                                      return ScaleTransition(
+                                        scale: CurvedAnimation(parent: anim1, curve: Curves.easeOut),
+                                        child: FadeTransition(opacity: anim1, child: child),
+                                      );
+                                    },
+                                    pageBuilder: (context, _, __) =>
+                                        EditFieldDialog(
+                                          title: 'Refill Stock',
+                                          label: 'Additional Stock',
+                                          initialValue: '0',
+                                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                          validator: (value) {
+                                            if (value!.isEmpty) return 'Amount is required';
+                                            if (double.tryParse(value) == null) return 'Enter a valid number';
+                                            return null;
+                                          },
+                                          onConfirm: (value) {
+                                            final newStock = med.stockQuantity + double.parse(value);
+                                            _saveMedicationField(
+                                                context, ref, med, 'stockQuantity', newStock.toString());
+                                          },
+                                        ),
                                   ),
                             ),
                             const Divider(height: 8),
                             _buildListTile(
                               context,
-                              title: 'Stock: ${Utils.removeTrailingZeros(med.stockQuantity)} $medQtyUnit',
-                              trailing: const Icon(Icons.edit, size: 24, color: Colors.blue),
-                              onTap: () =>
-                                  _showEditDialog(context, ref, med, 'stockQuantity', 'Stock Quantity',
-                                      med.stockQuantity.toString()),
-                            ),
-                            const Divider(height: 8),
-                            _buildListTile(
-                              context,
-                              title:
-                              'Total: ${Utils.removeTrailingZeros(med.concentration * med.stockQuantity)}${med
-                                  .concentrationUnit}',
-                              textStyle: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Theme
-                                    .of(context)
-                                    .colorScheme
-                                    .primary,
-                              ),
+                              title: 'Stock Estimated Run Out',
+                              subtitle: 'Calculation coming soon...',
+                              textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                              subtitleStyle: const TextStyle(fontSize: 14, color: Colors.grey),
                             ),
                           ],
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Doses
-                  const Text(
-                    'Doses',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
-                  ),
-                  const SizedBox(height: 12),
-                  dosesAsync.when(
-                    data: (doses) {
-                      final medDoses = doses.where((dose) => dose.medicationId == medicationId).toList();
-                      return medDoses.isEmpty
-                          ? const Card(
-                        elevation: 2,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
-                        child: Padding(
-                          padding: EdgeInsets.all(16),
-                          child: Text('No doses added', style: TextStyle(fontSize: 16, color: Colors.grey)),
-                        ),
-                      )
-                          : Column(
-                        children: medDoses
-                            .asMap()
-                            .entries
-                            .map((entry) {
-                          final index = entry.key;
-                          final dose = entry.value;
-                          return AnimationConfiguration.staggeredList(
-                            position: index,
-                            duration: const Duration(milliseconds: 300),
-                            child: SlideAnimation(
-                              verticalOffset: 20,
-                              child: Card(
-                                elevation: 2,
-                                shape: const RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.all(Radius.circular(16))),
-                                margin: const EdgeInsets.symmetric(vertical: 4),
-                                child: ListTile(
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                  title: Text(
-                                    dose.name ?? 'Unnamed',
-                                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                                  ),
-                                  subtitle: Text(
-                                    '${Utils.removeTrailingZeros(dose.amount)} ${dose.unit}',
-                                    style: const TextStyle(fontSize: 14, color: Colors.grey),
-                                  ),
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(Icons.edit, color: Colors.blue),
-                                        onPressed: () =>
-                                            Navigator.pushNamed(context, '/doses/edit', arguments: dose.id),
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(Icons.delete, color: Colors.red),
-                                        onPressed: () async {
-                                          final confirm = await showDialog<bool>(
-                                            context: context,
-                                            builder: (context) =>
-                                                StandardDialog(
-                                                  title: 'Delete Dose',
-                                                  content: 'Are you sure you want to delete this dose?',
-                                                  onConfirm: () => Navigator.pop(context, true),
-                                                  onCancel: () => Navigator.pop(context, false),
-                                                ),
-                                          );
-                                          if (confirm == true) {
-                                            await ref.read(driftServiceProvider).deleteDose(dose.id);
-                                            ref.invalidate(allDosesProvider);
-                                          }
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                  onTap: () => Navigator.pushNamed(context, '/doses/edit', arguments: dose.id),
-                                ),
-                              ),
-                            ),
-                          )
-                          ,
-                          );
-                        }).toList(),
-                      );
-                    },
-                    loading: () => const Center(child: CircularProgressIndicator()),
-                    error: (e, _) =>
-                        Text('Error: $e', style: TextStyle(color: Theme
-                            .of(context)
-                            .colorScheme
-                            .error)),
-                  ),
-                  const SizedBox(height: 8),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.add),
-                    label: const Text('Add Dose', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                    onPressed: () =>
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => DosesAddScreen(medicationId: medicationId)),
-                        ).then((_) => ref.invalidate(allDosesProvider)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme
-                          .of(context)
-                          .colorScheme
-                          .primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                      elevation: 4,
+                    const SizedBox(height: 16),
+                    // Dose History
+                    const Text(
+                      'Dose History',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Upcoming Doses
-                  const Text(
-                    'Upcoming Doses',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
-                  ),
-                  const SizedBox(height: 12),
-                  schedulesAsync.when(
-                    data: (schedules) {
-                      final upcoming = schedules
-                          .where((s) => s.medicationId == medicationId && s.time.isAfter(DateTime.now()))
-                          .take(3)
-                          .toList();
-                      return upcoming.isEmpty
-                          ? const Card(
-                        elevation: 2,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
-                        child: Padding(
-                          padding: EdgeInsets.all(16),
-                          child: Text('No upcoming doses', style: TextStyle(fontSize: 16, color: Colors.grey)),
-                        ),
-                      )
-                          : Column(
-                        children: upcoming
-                            .asMap()
-                            .entries
-                            .map((entry) {
-                          final index = entry.key;
-                          final schedule = entry.value;
-                          return AnimationConfiguration.staggeredList(
-                            position: index,
-                            duration: const Duration(milliseconds: 300),
-                            child: SlideAnimation(
-                              verticalOffset: 20,
-                              child: Card(
-                                elevation: 2,
-                                shape: const RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.all(Radius.circular(16))),
-                                margin: const EdgeInsets.symmetric(vertical: 4),
-                                child: ListTile(
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                  title: Text(
-                                    schedule.medicationName,
-                                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                                  ),
-                                  subtitle: Text(
-                                    'Time: ${DateFormat.jm().format(schedule.time)}',
-                                    style: const TextStyle(fontSize: 14, color: Colors.grey),
-                                  ),
-                                  trailing: const Icon(Icons.schedule, color: Colors.teal),
-                                ),
-                              ),
-                            ),
-                          )
-                          ,
-                          );
-                        }).toList(),
-                      );
-                    },
-                    loading: () => const Center(child: CircularProgressIndicator()),
-                    error: (e, _) =>
-                        Text('Error: $e', style: TextStyle(color: Theme
-                            .of(context)
-                            .colorScheme
-                            .error)),
-                  ),
-                  const SizedBox(height: 16),
-                  // Schedule Calendar
-                  const Text(
-                    'Schedule Calendar',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
-                  ),
-                  const SizedBox(height: 12),
-                  Card(
-                    elevation: 4,
-                    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
-                    child: Container(
-                      height: 200,
-                      padding: const EdgeInsets.all(16),
-                      child: const Center(
+                    const SizedBox(height: 12),
+                    Card(
+                      elevation: 4,
+                      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
+                      child: const Padding(
+                        padding: EdgeInsets.all(16),
                         child: Text(
-                          'Interactive calendar coming soon...',
+                          'Dose history list coming soon...',
                           style: TextStyle(fontSize: 16, color: Colors.grey),
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Stock Management
-                  const Text(
-                    'Stock Management',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
-                  ),
-                  const SizedBox(height: 12),
-                  Card(
-                    elevation: 4,
-                    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildListTile(
-                            context,
-                            title: 'Refill Stock',
-                            trailing: const Icon(Icons.add_circle, size: 24, color: Colors.green),
-                            onTap: () =>
-                                showGeneralDialog(
-                                  context: context,
-                                  barrierDismissible: true,
-                                  barrierLabel: 'Dismiss',
-                                  transitionDuration: const Duration(milliseconds: 300),
-                                  transitionBuilder: (context, anim1, anim2, child) {
-                                    return ScaleTransition(
-                                      scale: CurvedAnimation(parent: anim1, curve: Curves.easeOut),
-                                      child: FadeTransition(opacity: anim1, child: child),
+                    const SizedBox(height: 16),
+                    // Add Schedule
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.calendar_today),
+                      label: const Text('Add Schedule', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                      onPressed: () async {
+                        final doses = await ref.read(driftServiceProvider).getDoses(medicationId);
+                        if (doses.isEmpty) {
+                          await showGeneralDialog(
+                            context: context,
+                            barrierDismissible: true,
+                            barrierLabel: 'Dismiss',
+                            transitionDuration: const Duration(milliseconds: 300),
+                            transitionBuilder: (context, anim1, anim2, child) {
+                              return ScaleTransition(
+                                scale: CurvedAnimation(parent: anim1, curve: Curves.easeOut),
+                                child: FadeTransition(opacity: anim1, child: child),
+                              );
+                            },
+                            pageBuilder: (context, _, __) =>
+                                StandardDialog(
+                                  title: 'No Doses Available',
+                                  content: 'You must add at least one dose before creating a schedule.',
+                                  onConfirm: () {
+                                    Navigator.pop(context);
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(builder: (_) => DosesAddScreen(medicationId: medicationId)),
                                     );
                                   },
-                                  pageBuilder: (context, _, __) =>
-                                      EditFieldDialog(
-                                        title: 'Refill Stock',
-                                        label: 'Additional Stock',
-                                        initialValue: '0',
-                                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                        validator: (value) {
-                                          if (value!.isEmpty) return 'Amount is required';
-                                          if (double.tryParse(value) == null) return 'Enter a valid number';
-                                          return null;
-                                        },
-                                        onConfirm: (value) {
-                                          final newStock = med.stockQuantity + double.parse(value);
-                                          _saveMedicationField(context, ref, med, 'stockQuantity', newStock.toString());
-                                        },
-                                      ),
+                                  onCancel: () => Navigator.pop(context),
+                                  confirmText: 'Add Dose',
                                 ),
-                          ),
-                          const Divider(height: 8),
-                          _buildListTile(
-                            context,
-                            title: 'Stock Estimated Run Out',
-                            subtitle: 'Calculation coming soon...',
-                            textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                            subtitleStyle: const TextStyle(fontSize: 14, color: Colors.grey),
-                          ),
-                        ],
+                          );
+                          return;
+                        }
+                        Navigator.pushNamed(context, '/schedules/add', arguments: medicationId);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme
+                            .of(context)
+                            .colorScheme
+                            .primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                        elevation: 4,
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Dose History
-                  const Text(
-                    'Dose History',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
-                  ),
-                  const SizedBox(height: 12),
-                  Card(
-                    elevation: 4,
-                    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
-                    child: const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Text(
-                        'Dose history list coming soon...',
-                        style: TextStyle(fontSize: 16, color: Colors.grey),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Add Schedule
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.calendar_today),
-                    label: const Text('Add Schedule', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                    onPressed: () async {
-                      final doses = await ref.read(driftServiceProvider).getDoses(medicationId);
-                      if (doses.isEmpty) {
-                        await showGeneralDialog(
-                          context: context,
-                          barrierDismissible: true,
-                          barrierLabel: 'Dismiss',
-                          transitionDuration: const Duration(milliseconds: 300),
-                          transitionBuilder: (context, anim1, anim2, child) {
-                            return ScaleTransition(
-                              scale: CurvedAnimation(parent: anim1, curve: Curves.easeOut),
-                              child: FadeTransition(opacity: anim1, child: child),
-                            );
-                          },
-                          pageBuilder: (context, _, __) =>
-                              StandardDialog(
-                                title: 'No Doses Available',
-                                content: 'You must add at least one dose before creating a schedule.',
-                                onConfirm: () {
-                                  Navigator.pop(context);
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(builder: (_) => DosesAddScreen(medicationId: medicationId)),
-                                  );
-                                },
-                                onCancel: () => Navigator.pop(context),
-                                confirmText: 'Add Dose',
-                              ),
-                        );
-                        return;
-                      }
-                      Navigator.pushNamed(context, '/schedules/add', arguments: medicationId);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme
-                          .of(context)
-                          .colorScheme
-                          .primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                      elevation: 4,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-        )
-        ,
+          )
+          ,
         );
       },
       loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
