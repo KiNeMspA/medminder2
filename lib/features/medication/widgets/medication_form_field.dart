@@ -12,6 +12,7 @@ class MedicationFormField extends StatelessWidget {
   final TextInputType? keyboardType;
   final Widget? suffix;
   final double maxWidth;
+  final InputDecoration? decoration;
 
   const MedicationFormField({
     super.key,
@@ -23,6 +24,7 @@ class MedicationFormField extends StatelessWidget {
     this.keyboardType,
     this.suffix,
     required this.maxWidth,
+    this.decoration,
   });
 
   @override

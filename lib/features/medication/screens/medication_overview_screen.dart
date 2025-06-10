@@ -137,10 +137,7 @@ class MedicationOverviewScreen extends ConsumerWidget {
         return Scaffold(
           backgroundColor: Colors.white,
           appBar: AppBar(
-            title: Text(
-              med.name,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-            ),
+            title: Text(med.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
             backgroundColor: Colors.transparent,
             elevation: 0,
             flexibleSpace: Container(
@@ -196,7 +193,7 @@ class MedicationOverviewScreen extends ConsumerWidget {
                     // Medication Overview
                     const Text(
                       'Medication Overview',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black87),
                     ),
                     const SizedBox(height: 12),
                     Card(
@@ -215,7 +212,7 @@ class MedicationOverviewScreen extends ConsumerWidget {
                         child: Padding(
                           padding: const EdgeInsets.all(16),
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               GestureDetector(
                                 onTap: () => _showEditDialog(context, ref, med, 'name', 'Medication Name', med.name),
@@ -226,7 +223,6 @@ class MedicationOverviewScreen extends ConsumerWidget {
                                     fontWeight: FontWeight.bold,
                                     color: Colors.black87,
                                   ),
-                                  textAlign: TextAlign.center,
                                 ),
                               ),
                               const SizedBox(height: 4),
@@ -270,10 +266,33 @@ class MedicationOverviewScreen extends ConsumerWidget {
                                   'Stock Quantity',
                                   med.stockQuantity.toString(),
                                 ),
-                                child: Text(
-                                  '${Utils.removeTrailingZeros(med.stockQuantity)} $medQtyUnit out of ${Utils.removeTrailingZeros(med.stockQuantity)} Remain. This is a total of ${Utils.removeTrailingZeros(med.concentration * med.stockQuantity)}${med.concentrationUnit}.',
-                                  style: const TextStyle(fontSize: 16, color: Colors.black87),
-                                  textAlign: TextAlign.center,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    RichText(
+                                      text: TextSpan(
+                                        style: const TextStyle(fontSize: 16, color: Colors.black87),
+                                        children: [
+                                          TextSpan(
+                                            text: '${Utils.removeTrailingZeros(med.stockQuantity)} $medQtyUnit out of ',
+                                          ),
+                                          TextSpan(
+                                            text: Utils.removeTrailingZeros(med.stockQuantity),
+                                            style: TextStyle(
+                                              color: Theme.of(context).colorScheme.primary,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          const TextSpan(text: ' Remain'),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Total of ${Utils.removeTrailingZeros(med.concentration * med.stockQuantity)}${med.concentrationUnit} remain',
+                                      style: const TextStyle(fontSize: 16, color: Colors.black87),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],

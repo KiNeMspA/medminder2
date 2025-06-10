@@ -76,6 +76,7 @@ The `common/medication_matrix.dart` file is the cornerstone of MedMinder2’s lo
 - - Update: Replaced MedicationsEditScreen with MedicationOverviewScreen, renamed route to /medications-overview, and applied Figma-style UI with animations.
 - Fixed animation errors in MedicationOverviewScreen, ensuring smooth Figma-style transitions.
 - - Fixed MedicationOverviewScreen gradient errors by using Colors.grey[50]! instead of invalid grey50.
+- - Refactored MedicationOverviewScreen into modular widgets (MedicationOverviewCard, DosesList, UpcomingDosesList, ScheduleCalendar), extracted UI constants to medication_ui_constants.dart, and optimized dialog logic in medication_utils.dart. Updated Medication Overview UI with softer text, left alignment, and enhanced stock display.
 - 
 ## Project Structure
 - **Flutter Code** (`lib/`):
