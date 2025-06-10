@@ -2,8 +2,10 @@ import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:table_calendar/table_calendar.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import '../../../common/medication_matrix.dart';
+import '../../../common/theme/app_theme.dart';
 import '../../../common/utils/formatters.dart';
 import '../../../common/widgets/edit_field_dialog.dart';
 import '../../../common/widgets/standard_dialog.dart';
@@ -17,11 +19,13 @@ class MedicationOverviewScreen extends ConsumerWidget {
 
   const MedicationOverviewScreen({super.key, required this.medicationId});
 
-  Future<void> _saveMedicationField(BuildContext context,
-      WidgetRef ref,
-      Medication med,
-      String field,
-      String value,) async {
+  Future<void> _saveMedicationField(
+    BuildContext context,
+    WidgetRef ref,
+    Medication med,
+    String field,
+    String value,
+  ) async {
     try {
       final update = MedicationsCompanion(
         id: drift.Value(med.id),
@@ -36,35 +40,27 @@ class MedicationOverviewScreen extends ConsumerWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Medication updated'),
-          backgroundColor: Theme
-              .of(context)
-              .colorScheme
-              .secondary,
+          backgroundColor: Theme.of(context).colorScheme.secondary,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: Theme
-              .of(context)
-              .colorScheme
-              .error,
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Theme.of(context).colorScheme.error));
     }
   }
 
-  void _showEditDialog(BuildContext context,
-      WidgetRef ref,
-      Medication med,
-      String field,
-      String label,
-      String initialValue, {
-        List<String>? dropdownOptions,
-      }) {
+  void _showEditDialog(
+    BuildContext context,
+    WidgetRef ref,
+    Medication med,
+    String field,
+    String label,
+    String initialValue, {
+    List<String>? dropdownOptions,
+  }) {
     showGeneralDialog(
       context: context,
       barrierDismissible: true,
@@ -76,20 +72,19 @@ class MedicationOverviewScreen extends ConsumerWidget {
           child: FadeTransition(opacity: anim1, child: child),
         );
       },
-      pageBuilder: (context, _, __) =>
-          EditFieldDialog(
-            title: 'Edit $label',
-            label: label,
-            initialValue: initialValue,
-            keyboardType: field == 'name' ? TextInputType.text : const TextInputType.numberWithOptions(decimal: true),
-            validator: (value) {
-              if (value!.isEmpty) return '$label is required';
-              if (field != 'name' && double.tryParse(value) == null) return 'Enter a valid number';
-              return null;
-            },
-            dropdownOptions: dropdownOptions,
-            onConfirm: (value) => _saveMedicationField(context, ref, med, field, value),
-          ),
+      pageBuilder: (context, _, __) => EditFieldDialog(
+        title: 'Edit $label',
+        label: label,
+        initialValue: initialValue,
+        keyboardType: field == 'name' ? TextInputType.text : const TextInputType.numberWithOptions(decimal: true),
+        validator: (value) {
+          if (value!.isEmpty) return '$label is required';
+          if (field != 'name' && double.tryParse(value) == null) return 'Enter a valid number';
+          return null;
+        },
+        dropdownOptions: dropdownOptions,
+        onConfirm: (value) => _saveMedicationField(context, ref, med, field, value),
+      ),
     );
   }
 
@@ -105,14 +100,13 @@ class MedicationOverviewScreen extends ConsumerWidget {
           child: FadeTransition(opacity: anim1, child: child),
         );
       },
-      pageBuilder: (context, _, __) =>
-          StandardDialog(
-            title: 'Cannot Edit Type',
-            content: 'Medication type cannot be changed.',
-            onConfirm: () => Navigator.pop(context),
-            confirmText: 'OK',
-            onCancel: null,
-          ),
+      pageBuilder: (context, _, __) => StandardDialog(
+        title: 'Cannot Edit Type',
+        content: 'Medication type cannot be changed.',
+        onConfirm: () => Navigator.pop(context),
+        confirmText: 'OK',
+        onCancel: null,
+      ),
     );
   }
 
@@ -128,12 +122,12 @@ class MedicationOverviewScreen extends ConsumerWidget {
         final qtyNum = med.stockQuantity;
         final medQtyUnit = med.form == 'Tablet'
             ? qtyNum > 1
-            ? 'Tablets'
-            : 'Tablet'
+                  ? 'Tablets'
+                  : 'Tablet'
             : med.form == 'Capsule'
             ? qtyNum > 1
-            ? 'Capsules'
-            : 'Capsule'
+                  ? 'Capsules'
+                  : 'Capsule'
             : 'mL';
         final type = MedicationMatrix.formToType(med.form);
         final subType = MedicationFormConstants.subTypes[type]?.contains(med.form) ?? false
@@ -153,15 +147,8 @@ class MedicationOverviewScreen extends ConsumerWidget {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    Theme
-                        .of(context)
-                        .colorScheme
-                        .primary,
-                    Theme
-                        .of(context)
-                        .colorScheme
-                        .primary
-                        .withOpacity(0.8),
+                    Theme.of(context).colorScheme.primary,
+                    Theme.of(context).colorScheme.primary.withOpacity(0.8),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -171,31 +158,29 @@ class MedicationOverviewScreen extends ConsumerWidget {
             actions: [
               IconButton(
                 icon: const Icon(Icons.delete, color: Colors.red),
-                onPressed: () =>
-                    showGeneralDialog(
-                      context: context,
-                      barrierDismissible: true,
-                      barrierLabel: 'Dismiss',
-                      transitionDuration: const Duration(milliseconds: 300),
-                      transitionBuilder: (context, anim1, anim2, child) {
-                        return ScaleTransition(
-                          scale: CurvedAnimation(parent: anim1, curve: Curves.easeOut),
-                          child: FadeTransition(opacity: anim1, child: child),
-                        );
-                      },
-                      pageBuilder: (context, _, __) =>
-                          StandardDialog(
-                            title: 'Delete Medication',
-                            content: 'Are you sure you want to delete ${med.name}?',
-                            onConfirm: () async {
-                              await ref.read(driftServiceProvider).deleteMedication(med.id);
-                              ref.invalidate(medicationsProvider);
-                              Navigator.pop(context);
-                              Navigator.pop(context);
-                            },
-                            confirmText: 'Confirm',
-                          ),
-                    ),
+                onPressed: () => showGeneralDialog(
+                  context: context,
+                  barrierDismissible: true,
+                  barrierLabel: 'Dismiss',
+                  transitionDuration: const Duration(milliseconds: 300),
+                  transitionBuilder: (context, anim1, anim2, child) {
+                    return ScaleTransition(
+                      scale: CurvedAnimation(parent: anim1, curve: Curves.easeOut),
+                      child: FadeTransition(opacity: anim1, child: child),
+                    );
+                  },
+                  pageBuilder: (context, _, __) => StandardDialog(
+                    title: 'Delete Medication',
+                    content: 'Are you sure you want to delete ${med.name}?',
+                    onConfirm: () async {
+                      await ref.read(driftServiceProvider).deleteMedication(med.id);
+                      ref.invalidate(medicationsProvider);
+                      Navigator.pop(context);
+                      Navigator.pop(context);
+                    },
+                    confirmText: 'Confirm',
+                  ),
+                ),
               ),
             ],
           ),
@@ -206,15 +191,11 @@ class MedicationOverviewScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: AnimationConfiguration.toStaggeredList(
                   duration: const Duration(milliseconds: 300),
-                  childAnimationBuilder: (widget) =>
-                      SlideAnimation(
-                        verticalOffset: 50,
-                        child: widget,
-                      ),
+                  childAnimationBuilder: (widget) => SlideAnimation(verticalOffset: 50, child: widget),
                   children: [
-                    // Medication Details
+                    // Medication Overview
                     const Text(
-                      'Medication Details',
+                      'Medication Overview',
                       style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
                     ),
                     const SizedBox(height: 12),
@@ -234,188 +215,70 @@ class MedicationOverviewScreen extends ConsumerWidget {
                         child: Padding(
                           padding: const EdgeInsets.all(16),
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              _buildListTile(
-                                context,
-                                title: 'Name: ${med.name}',
-                                trailing: const Icon(Icons.edit, size: 24, color: Colors.blue),
+                              GestureDetector(
                                 onTap: () => _showEditDialog(context, ref, med, 'name', 'Medication Name', med.name),
+                                child: Text(
+                                  med.name,
+                                  style: const TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black87,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
                               ),
-                              const Divider(height: 8),
-                              _buildListTile(
-                                context,
-                                title: 'Type: ${med.form}',
-                                trailing: const Icon(Icons.lock, size: 24, color: Colors.grey),
+                              const SizedBox(height: 4),
+                              GestureDetector(
                                 onTap: () => _showTypeWarning(context),
+                                child: Text(
+                                  med.form,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black54,
+                                  ),
+                                ),
                               ),
-                              const Divider(height: 8),
-                              _buildListTile(
-                                context,
-                                title:
-                                'Strength: ${Utils.removeTrailingZeros(med.concentration)}${med
-                                    .concentrationUnit} per ${med.form == 'Tablet' ? 'Tablet' : med.form == 'Capsule'
-                                    ? 'Capsule'
-                                    : 'mL'}',
-                                trailing: const Icon(Icons.edit, size: 24, color: Colors.blue),
-                                onTap: () =>
-                                    _showEditDialog(context, ref, med, 'concentration', 'Concentration',
-                                        med.concentration.toString()),
+                              const SizedBox(height: 8),
+                              GestureDetector(
+                                onTap: () => _showEditDialog(
+                                  context,
+                                  ref,
+                                  med,
+                                  'concentration',
+                                  'Concentration',
+                                  med.concentration.toString(),
+                                ),
+                                child: Text(
+                                  '${Utils.removeTrailingZeros(med.concentration)}${med.concentrationUnit} per ${med.form == 'Tablet'
+                                      ? 'Tablet'
+                                      : med.form == 'Capsule'
+                                      ? 'Capsule'
+                                      : 'mL'}',
+                                  style: const TextStyle(fontSize: 16, color: Colors.black87),
+                                ),
                               ),
-                              const Divider(height: 8),
-                              _buildListTile(
-                                context,
-                                title: 'Unit: ${med.concentrationUnit}',
-                                trailing: const Icon(Icons.edit, size: 24, color: Colors.blue),
-                                onTap: () =>
-                                    _showEditDialog(
-                                      context,
-                                      ref,
-                                      med,
-                                      'concentrationUnit',
-                                      'Concentration Unit',
-                                      med.concentrationUnit,
-                                      dropdownOptions: MedicationFormConstants.getConcentrationUnits(type, subType),
-                                    ),
-                              ),
-                              const Divider(height: 8),
-                              _buildListTile(
-                                context,
-                                title: 'Stock: ${Utils.removeTrailingZeros(med.stockQuantity)} $medQtyUnit',
-                                trailing: const Icon(Icons.edit, size: 24, color: Colors.blue),
-                                onTap: () =>
-                                    _showEditDialog(context, ref, med, 'stockQuantity', 'Stock Quantity',
-                                        med.stockQuantity.toString()),
-                              ),
-                              const Divider(height: 8),
-                              _buildListTile(
-                                context,
-                                title:
-                                'Total: ${Utils.removeTrailingZeros(med.concentration * med.stockQuantity)}${med
-                                    .concentrationUnit}',
-                                textStyle: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: Theme
-                                      .of(context)
-                                      .colorScheme
-                                      .primary,
+                              const SizedBox(height: 8),
+                              GestureDetector(
+                                onTap: () => _showEditDialog(
+                                  context,
+                                  ref,
+                                  med,
+                                  'stockQuantity',
+                                  'Stock Quantity',
+                                  med.stockQuantity.toString(),
+                                ),
+                                child: Text(
+                                  '${Utils.removeTrailingZeros(med.stockQuantity)} $medQtyUnit out of ${Utils.removeTrailingZeros(med.stockQuantity)} Remain. This is a total of ${Utils.removeTrailingZeros(med.concentration * med.stockQuantity)}${med.concentrationUnit}.',
+                                  style: const TextStyle(fontSize: 16, color: Colors.black87),
+                                  textAlign: TextAlign.center,
                                 ),
                               ),
                             ],
                           ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    // Doses
-                    const Text(
-                      'Doses',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
-                    ),
-                    const SizedBox(height: 12),
-                    dosesAsync.when(
-                      data: (doses) {
-                        final medDoses = doses.where((dose) => dose.medicationId == medicationId).toList();
-                        return medDoses.isEmpty
-                            ? const Card(
-                          elevation: 2,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
-                          child: Padding(
-                            padding: EdgeInsets.all(16),
-                            child: Text('No doses added', style: TextStyle(fontSize: 16, color: Colors.grey)),
-                          ),
-                        )
-                            : Column(
-                          children: medDoses
-                              .asMap()
-                              .entries
-                              .map((entry) {
-                            final index = entry.key;
-                            final dose = entry.value;
-                            return AnimationConfiguration.staggeredList(
-                              position: index,
-                              duration: const Duration(milliseconds: 300),
-                              child: SlideAnimation(
-                                verticalOffset: 20,
-                                child: Card(
-                                  elevation: 2,
-                                  shape: const RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.all(Radius.circular(16))),
-                                  margin: const EdgeInsets.symmetric(vertical: 4),
-                                  child: ListTile(
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                    title: Text(
-                                      dose.name ?? 'Unnamed',
-                                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                                    ),
-                                    subtitle: Text(
-                                      '${Utils.removeTrailingZeros(dose.amount)} ${dose.unit}',
-                                      style: const TextStyle(fontSize: 14, color: Colors.grey),
-                                    ),
-                                    trailing: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        IconButton(
-                                          icon: const Icon(Icons.edit, color: Colors.blue),
-                                          onPressed: () =>
-                                              Navigator.pushNamed(context, '/doses/edit', arguments: dose.id),
-                                        ),
-                                        IconButton(
-                                          icon: const Icon(Icons.delete, color: Colors.red),
-                                          onPressed: () async {
-                                            final confirm = await showDialog<bool>(
-                                              context: context,
-                                              builder: (context) =>
-                                                  StandardDialog(
-                                                    title: 'Delete Dose',
-                                                    content: 'Are you sure you want to delete this dose?',
-                                                    onConfirm: () => Navigator.pop(context, true),
-                                                    onCancel: () => Navigator.pop(context, false),
-                                                  ),
-                                            );
-                                            if (confirm == true) {
-                                              await ref.read(driftServiceProvider).deleteDose(dose.id);
-                                              ref.invalidate(allDosesProvider);
-                                            }
-                                          },
-                                        ),
-                                      ],
-                                    ),
-                                    onTap: () => Navigator.pushNamed(context, '/doses/edit', arguments: dose.id),
-                                  ),
-                                ),
-                              )
-                              ,
-                            );
-                          }).toList(),
-                        );
-                      },
-                      loading: () => const Center(child: CircularProgressIndicator()),
-                      error: (e, _) =>
-                          Text('Error: $e', style: TextStyle(color: Theme
-                              .of(context)
-                              .colorScheme
-                              .error)),
-                    ),
-                    const SizedBox(height: 8),
-                    ElevatedButton.icon(
-                      icon: const Icon(Icons.add),
-                      label: const Text('Add Dose', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                      onPressed: () =>
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => DosesAddScreen(medicationId: medicationId)),
-                          ).then((_) => ref.invalidate(allDosesProvider)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme
-                            .of(context)
-                            .colorScheme
-                            .primary,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                        elevation: 4,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -433,55 +296,144 @@ class MedicationOverviewScreen extends ConsumerWidget {
                             .toList();
                         return upcoming.isEmpty
                             ? const Card(
-                          elevation: 2,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
-                          child: Padding(
-                            padding: EdgeInsets.all(16),
-                            child: Text('No upcoming doses', style: TextStyle(fontSize: 16, color: Colors.grey)),
-                          ),
-                        )
+                                elevation: 2,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
+                                child: Padding(
+                                  padding: EdgeInsets.all(16),
+                                  child: Text('No upcoming doses', style: TextStyle(fontSize: 16, color: Colors.grey)),
+                                ),
+                              )
                             : Column(
-                          children: upcoming
-                              .asMap()
-                              .entries
-                              .map((entry) {
-                            final index = entry.key;
-                            final schedule = entry.value;
-                            return AnimationConfiguration.staggeredList(
-                              position: index,
-                              duration: const Duration(milliseconds: 300),
-                              child: SlideAnimation(
-                                verticalOffset: 20,
-                                child: Card(
-                                  elevation: 2,
-                                  shape: const RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.all(Radius.circular(16))),
-                                  margin: const EdgeInsets.symmetric(vertical: 4),
-                                  child: ListTile(
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                    title: Text(
-                                      schedule.medicationName,
-                                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                                children: upcoming.asMap().entries.map((entry) {
+                                  final index = entry.key;
+                                  final schedule = entry.value;
+                                  return AnimationConfiguration.staggeredList(
+                                    position: index,
+                                    duration: const Duration(milliseconds: 300),
+                                    child: SlideAnimation(
+                                      verticalOffset: 20,
+                                      child: Card(
+                                        elevation: 2,
+                                        shape: const RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.all(Radius.circular(16)),
+                                        ),
+                                        margin: const EdgeInsets.symmetric(vertical: 4),
+                                        child: ListTile(
+                                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                          title: Text(
+                                            schedule.medicationName,
+                                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                                          ),
+                                          subtitle: Text(
+                                            'Time: ${DateFormat.jm().format(schedule.time)}',
+                                            style: const TextStyle(fontSize: 14, color: Colors.grey),
+                                          ),
+                                          trailing: const Icon(Icons.schedule, color: Colors.teal),
+                                        ),
+                                      ),
                                     ),
-                                    subtitle: Text(
-                                      'Time: ${DateFormat.jm().format(schedule.time)}',
-                                      style: const TextStyle(fontSize: 14, color: Colors.grey),
+                                  );
+                                }).toList(),
+                              );
+                      },
+                      loading: () => const Center(child: CircularProgressIndicator()),
+                      error: (e, _) => Text('Error: $e', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                    ),
+                    const SizedBox(height: 16),
+                    // Doses
+                    const Text(
+                      'Doses',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+                    ),
+                    const SizedBox(height: 12),
+                    dosesAsync.when(
+                      data: (doses) {
+                        final medDoses = doses.where((dose) => dose.medicationId == medicationId).toList();
+                        return Card(
+                          elevation: 2,
+                          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (medDoses.isEmpty)
+                                  const Text('No doses added', style: TextStyle(fontSize: 16, color: Colors.grey))
+                                else
+                                  ...medDoses.asMap().entries.map((entry) {
+                                    final index = entry.key;
+                                    final dose = entry.value;
+                                    return AnimationConfiguration.staggeredList(
+                                      position: index,
+                                      duration: const Duration(milliseconds: 300),
+                                      child: SlideAnimation(
+                                        verticalOffset: 20,
+                                        child: ListTile(
+                                          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          title: Text(
+                                            dose.name ?? 'Unnamed',
+                                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                                          ),
+                                          subtitle: Text(
+                                            '${Utils.removeTrailingZeros(dose.amount)} ${dose.unit}',
+                                            style: const TextStyle(fontSize: 14, color: Colors.grey),
+                                          ),
+                                          trailing: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              IconButton(
+                                                icon: const Icon(Icons.edit, color: Colors.blue),
+                                                onPressed: () =>
+                                                    Navigator.pushNamed(context, '/doses/edit', arguments: dose.id),
+                                              ),
+                                              IconButton(
+                                                icon: const Icon(Icons.delete, color: Colors.red),
+                                                onPressed: () async {
+                                                  final confirm = await showDialog<bool>(
+                                                    context: context,
+                                                    builder: (context) => StandardDialog(
+                                                      title: 'Delete Dose',
+                                                      content: 'Are you sure you want to delete this dose?',
+                                                      onConfirm: () => Navigator.pop(context, true),
+                                                      onCancel: () => Navigator.pop(context, false),
+                                                    ),
+                                                  );
+                                                  if (confirm == true) {
+                                                    await ref.read(driftServiceProvider).deleteDose(dose.id);
+                                                    ref.invalidate(allDosesProvider);
+                                                  }
+                                                },
+                                              ),
+                                            ],
+                                          ),
+                                          onTap: () => Navigator.pushNamed(context, '/doses/edit', arguments: dose.id),
+                                        ),
+                                      ),
+                                    );
+                                  }),
+                                const SizedBox(height: 8),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton.icon(
+                                    icon: const Icon(Icons.add, size: 18),
+                                    label: const Text('Add Dose', style: TextStyle(fontSize: 14)),
+                                    onPressed: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(builder: (_) => DosesAddScreen(medicationId: medicationId)),
+                                    ).then((_) => ref.invalidate(allDosesProvider)),
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: Theme.of(context).colorScheme.primary,
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                     ),
-                                    trailing: const Icon(Icons.schedule, color: Colors.teal),
                                   ),
                                 ),
-                            )
-                            ,
-                            );
-                          }).toList(),
+                              ],
+                            ),
+                          ),
                         );
                       },
                       loading: () => const Center(child: CircularProgressIndicator()),
-                      error: (e, _) =>
-                          Text('Error: $e', style: TextStyle(color: Theme
-                              .of(context)
-                              .colorScheme
-                              .error)),
+                      error: (e, _) => Text('Error: $e', style: TextStyle(color: Theme.of(context).colorScheme.error)),
                     ),
                     const SizedBox(height: 16),
                     // Schedule Calendar
@@ -494,75 +446,99 @@ class MedicationOverviewScreen extends ConsumerWidget {
                       elevation: 4,
                       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
                       child: Container(
-                        height: 200,
-                        padding: const EdgeInsets.all(16),
-                        child: const Center(
-                          child: Text(
-                            'Interactive calendar coming soon...',
-                            style: TextStyle(fontSize: 16, color: Colors.grey),
+                        height: 250,
+                        decoration: BoxDecoration(
+                          borderRadius: const BorderRadius.all(Radius.circular(16)),
+                          gradient: LinearGradient(
+                            colors: [Colors.grey[50]!, Colors.white],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    // Stock Management
-                    const Text(
-                      'Stock Management',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
-                    ),
-                    const SizedBox(height: 12),
-                    Card(
-                      elevation: 4,
-                      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildListTile(
-                              context,
-                              title: 'Refill Stock',
-                              trailing: const Icon(Icons.add_circle, size: 24, color: Colors.green),
-                              onTap: () =>
-                                  showGeneralDialog(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: TableCalendar(
+                            firstDay: DateTime.now().subtract(const Duration(days: 365)),
+                            lastDay: DateTime.now().add(const Duration(days: 365)),
+                            focusedDay: DateTime.now(),
+                            calendarFormat: CalendarFormat.month,
+                            eventLoader: (day) {
+                              return schedulesAsync
+                                      .whenData(
+                                        (schedules) => schedules
+                                            .where(
+                                              (s) =>
+                                                  s.medicationId == medicationId &&
+                                                  s.time.day == day.day &&
+                                                  s.time.month == day.month &&
+                                                  s.time.year == day.year,
+                                            )
+                                            .toList(),
+                                      )
+                                      .value ??
+                                  [];
+                            },
+                            calendarStyle: CalendarStyle(
+                              markerDecoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.secondary,
+                                shape: BoxShape.circle,
+                              ),
+                              todayDecoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                                shape: BoxShape.circle,
+                              ),
+                              selectedDecoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.primary,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            headerStyle: const HeaderStyle(
+                              formatButtonVisible: false,
+                              titleCentered: true,
+                              titleTextStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                            ),
+                            onDaySelected: (selectedDay, focusedDay) {
+                              if (schedulesAsync.value != null) {
+                                final daySchedules = schedulesAsync.value!
+                                    .where(
+                                      (s) =>
+                                          s.medicationId == medicationId &&
+                                          s.time.day == selectedDay.day &&
+                                          s.time.month == selectedDay.month &&
+                                          s.time.year == selectedDay.year,
+                                    )
+                                    .toList();
+                                if (daySchedules.isNotEmpty) {
+                                  showModalBottomSheet(
                                     context: context,
-                                    barrierDismissible: true,
-                                    barrierLabel: 'Dismiss',
-                                    transitionDuration: const Duration(milliseconds: 300),
-                                    transitionBuilder: (context, anim1, anim2, child) {
-                                      return ScaleTransition(
-                                        scale: CurvedAnimation(parent: anim1, curve: Curves.easeOut),
-                                        child: FadeTransition(opacity: anim1, child: child),
-                                      );
-                                    },
-                                    pageBuilder: (context, _, __) =>
-                                        EditFieldDialog(
-                                          title: 'Refill Stock',
-                                          label: 'Additional Stock',
-                                          initialValue: '0',
-                                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                          validator: (value) {
-                                            if (value!.isEmpty) return 'Amount is required';
-                                            if (double.tryParse(value) == null) return 'Enter a valid number';
-                                            return null;
-                                          },
-                                          onConfirm: (value) {
-                                            final newStock = med.stockQuantity + double.parse(value);
-                                            _saveMedicationField(
-                                                context, ref, med, 'stockQuantity', newStock.toString());
-                                          },
-                                        ),
-                                  ),
-                            ),
-                            const Divider(height: 8),
-                            _buildListTile(
-                              context,
-                              title: 'Stock Estimated Run Out',
-                              subtitle: 'Calculation coming soon...',
-                              textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                              subtitleStyle: const TextStyle(fontSize: 14, color: Colors.grey),
-                            ),
-                          ],
+                                    shape: const RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                                    ),
+                                    builder: (context) => Padding(
+                                      padding: const EdgeInsets.all(16),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Schedules for ${DateFormat.yMMMd().format(selectedDay)}',
+                                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          ...daySchedules.map(
+                                            (s) => ListTile(
+                                              title: Text(s.medicationName),
+                                              subtitle: Text('Time: ${DateFormat.jm().format(s.time)}'),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                          ),
                         ),
                       ),
                     ),
@@ -603,30 +579,26 @@ class MedicationOverviewScreen extends ConsumerWidget {
                                 child: FadeTransition(opacity: anim1, child: child),
                               );
                             },
-                            pageBuilder: (context, _, __) =>
-                                StandardDialog(
-                                  title: 'No Doses Available',
-                                  content: 'You must add at least one dose before creating a schedule.',
-                                  onConfirm: () {
-                                    Navigator.pop(context);
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(builder: (_) => DosesAddScreen(medicationId: medicationId)),
-                                    );
-                                  },
-                                  onCancel: () => Navigator.pop(context),
-                                  confirmText: 'Add Dose',
-                                ),
+                            pageBuilder: (context, _, __) => StandardDialog(
+                              title: 'No Doses Available',
+                              content: 'You must add at least one dose before creating a schedule.',
+                              onConfirm: () {
+                                Navigator.pop(context);
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => DosesAddScreen(medicationId: medicationId)),
+                                );
+                              },
+                              onCancel: () => Navigator.pop(context),
+                              confirmText: 'Add Dose',
+                            ),
                           );
                           return;
                         }
                         Navigator.pushNamed(context, '/schedules/add', arguments: medicationId);
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme
-                            .of(context)
-                            .colorScheme
-                            .primary,
+                        backgroundColor: Theme.of(context).colorScheme.primary,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -637,40 +609,15 @@ class MedicationOverviewScreen extends ConsumerWidget {
                 ),
               ),
             ),
-          )
-          ,
+          ),
         );
       },
       loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (e, _) => Scaffold(body: Center(child: Text('Error: $e', style: const TextStyle(color: Colors.red)))),
-    );
-  }
-
-  Widget _buildListTile(BuildContext context, {
-    required String title,
-    String? subtitle,
-    Widget? trailing,
-    VoidCallback? onTap,
-    TextStyle? textStyle,
-    TextStyle? subtitleStyle,
-  }) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      title: Text(
-        title,
-        style: textStyle ?? const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black87),
+      error: (e, _) => Scaffold(
+        body: Center(
+          child: Text('Error: $e', style: const TextStyle(color: Colors.red)),
+        ),
       ),
-      subtitle: subtitle != null
-          ? Text(
-        subtitle,
-        style: subtitleStyle ?? const TextStyle(fontSize: 14, color: Colors.grey),
-      )
-          : null,
-      trailing: trailing,
-      onTap: onTap,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
-      tileColor: Colors.white.withOpacity(0.1),
-      visualDensity: VisualDensity.compact,
     );
   }
 }

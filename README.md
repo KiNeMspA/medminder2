@@ -75,6 +75,7 @@ The `common/medication_matrix.dart` file is the cornerstone of MedMinder2’s lo
 - Update: Added debug button to HomeScreen AppBar for navigation to /debug route.
 - - Update: Replaced MedicationsEditScreen with MedicationOverviewScreen, renamed route to /medications-overview, and applied Figma-style UI with animations.
 - Fixed animation errors in MedicationOverviewScreen, ensuring smooth Figma-style transitions.
+- - Fixed MedicationOverviewScreen gradient errors by using Colors.grey[50]! instead of invalid grey50.
 - 
 ## Project Structure
 - **Flutter Code** (`lib/`):
